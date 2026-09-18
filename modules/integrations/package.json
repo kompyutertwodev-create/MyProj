@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/integrations",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@workspace/kernel": "workspace:*",
+    "@workspace/contracts": "workspace:*",
+    "@workspace/platform": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

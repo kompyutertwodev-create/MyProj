@@ -1,0 +1,48 @@
+{
+  "name": "@workspace/platform-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./http": "./src/http/index.ts",
+    "./query": "./src/query/index.ts",
+    "./router": "./src/router/index.ts",
+    "./forms": "./src/forms/index.ts",
+    "./table": "./src/table/index.ts",
+    "./virtual": "./src/virtual/index.ts",
+    "./storage": "./src/storage/index.ts",
+    "./state": "./src/state/index.ts",
+    "./theme": "./src/theme/index.ts",
+    "./browser": "./src/browser/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./notifications": "./src/notifications/index.ts",
+    "./analytics": "./src/analytics/index.ts",
+    "./cookies": "./src/cookies/index.ts",
+    "./hooks": "./src/hooks/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@workspace/kernel": "workspace:*",
+    "@workspace/contracts": "workspace:*",
+    "@workspace/ui": "workspace:*",
+    "ky": "catalog:",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-form": "catalog:",
+    "@tanstack/react-table": "catalog:",
+    "@tanstack/react-virtual": "catalog:",
+    "zustand": "catalog:",
+    "zod": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
+  }
+}

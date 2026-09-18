@@ -1,0 +1,78 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.staging
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+
+# Docker
+.dockerignore
+
+# Deployment
+.vercel/
+.netlify/
+
+# OS
+Thumbs.db
+
+# Additional tooling / framework ignores
+.pnp/
+.pnp.js
+.nuxt/
+.vuepress/dist/
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+lerna-debug.log*
+
+# Local Git metadata backup
+.git.backup/

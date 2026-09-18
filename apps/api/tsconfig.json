@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/kernel" },
+    { "path": "../../packages/contracts" },
+    { "path": "../../packages/platform" },
+    { "path": "../../modules/iam" },
+    { "path": "../../modules/billing" },
+    { "path": "../../modules/tenant" },
+    { "path": "../../modules/notification" },
+    { "path": "../../modules/audit" }
+  ]
+}

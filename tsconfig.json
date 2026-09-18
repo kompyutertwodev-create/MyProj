@@ -1,0 +1,91 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./lib/api-client-react"
+    },
+    {
+      "path": "./lib/api-zod"
+    },
+    {
+      "path": "./packages/kernel"
+    },
+    {
+      "path": "./packages/contracts"
+    },
+    {
+      "path": "./packages/platform"
+    },
+    {
+      "path": "./packages/platform/client"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./packages/tooling/test-utils"
+    },
+    {
+      "path": "./modules/iam"
+    },
+    {
+      "path": "./modules/billing"
+    },
+    {
+      "path": "./modules/tenant"
+    },
+    {
+      "path": "./modules/notification"
+    },
+    {
+      "path": "./modules/audit"
+    },
+    {
+      "path": "./modules/catalog"
+    },
+    {
+      "path": "./modules/content"
+    },
+    {
+      "path": "./modules/viewing"
+    },
+    {
+      "path": "./modules/subscription"
+    },
+    {
+      "path": "./modules/media"
+    },
+    {
+      "path": "./modules/search"
+    },
+    {
+      "path": "./modules/analytics"
+    },
+    {
+      "path": "./modules/access-control"
+    },
+    {
+      "path": "./modules/features"
+    },
+    {
+      "path": "./modules/devices"
+    },
+    {
+      "path": "./modules/integrations"
+    },
+    {
+      "path": "./modules/advertising"
+    },
+    {
+      "path": "./modules/social"
+    },
+    {
+      "path": "./modules/admin"
+    },
+    {
+      "path": "./modules/reports"
+    }
+  ]
+}

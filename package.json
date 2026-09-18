@@ -1,0 +1,40 @@
+{
+  "name": "identity-platform",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "dev": "pnpm --filter @workspace/api run dev",
+    "dev:web": "pnpm --filter @workspace/web run dev",
+    "dev:admin": "pnpm --filter @workspace/admin run dev",
+    "lint": "pnpm -r --if-present run lint",
+    "lint:fix": "pnpm -r --if-present run lint:fix",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "clean": "pnpm -r --if-present run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "@workspace/eslint-config": "workspace:*",
+    "@workspace/prettier-config": "workspace:*",
+    "@workspace/tsconfig": "workspace:*",
+    "@workspace/test-utils": "workspace:*",
+    "@playwright/test": "^1.48.0",
+    "@vitest/coverage-v8": "^1.6.0",
+    "jose": "^5.9.6",
+    "playwright": "^1.48.0",
+    "prettier": "^3.9.4",
+    "typescript": "~5.9.3",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

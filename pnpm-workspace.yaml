@@ -1,0 +1,108 @@
+# ============================================================================
+# SECURITY: Minimum release age for npm packages (supply-chain attack defense)
+# ============================================================================
+#
+# This setting requires that any npm package version must have been published
+# for at least 1 day (1440 minutes) before pnpm will allow installing it.
+# This is a critical defense against supply-chain attacks. In most cases,
+# malicious npm releases are discovered and pulled within hours, so a 1-day
+# delay provides a strong safety buffer.
+#
+# DO NOT DISABLE THIS SETTING. Removing or setting it to 0 is considered
+# extremely dangerous and leaves the entire workspace vulnerable to supply-
+# chain attacks, which have been the #1 vector for npm ecosystem compromises.
+#
+# If you absolutely need to install a package before the 1-day window has
+# passed (e.g. an urgent security bugfix), you can add it to the
+# `minimumReleaseAgeExclude` allowlist below. Only consider doing this for
+# packages released by trusted organizations with an impeccable security
+# posture (e.g. Replit packsges, react from Meta, typescript from Microsoft). Even then,
+# remove the exclusion once the 1-day window has passed.
+#
+# Example:
+#   minimumReleaseAgeExclude:
+#     - react
+#     - typescript
+#
+# ============================================================================
+minimumReleaseAge: 1440
+
+minimumReleaseAgeExclude: []
+  # Only exclude packages from trusted organizations
+  # - react
+  # - typescript
+  # - @types/*
+
+packages:
+  - artifacts/*
+  - lib/*
+  - lib/integrations/*
+  - scripts
+  - apps/*
+  - modules/*
+  - packages/kernel
+  - packages/contracts
+  - packages/platform
+  - packages/platform/client
+  - packages/ui
+  - packages/tooling/*
+
+catalog:
+  '@radix-ui/react-avatar': ^1.1.2
+  '@radix-ui/react-dialog': ^1.1.4
+  '@radix-ui/react-dropdown-menu': ^2.1.4
+  '@radix-ui/react-slot': ^1.1.1
+  '@tailwindcss/vite': ^4.1.14
+  '@tanstack/react-form': ^0.41.3
+  '@tanstack/react-query': ^5.90.21
+  '@tanstack/react-router': ^1.87.0
+  '@tanstack/react-table': ^8.20.5
+  '@tanstack/react-virtual': ^3.10.9
+  '@types/node': ^25.3.3
+  '@types/react': ^19.2.0
+  '@types/react-dom': ^19.2.0
+  '@vitejs/plugin-react': ^5.0.4
+  class-variance-authority: ^0.7.1
+  clsx: ^2.1.1
+  date-fns: ^4.1.0
+  drizzle-orm: ^0.45.2
+  esbuild: ^0.27.3
+  express: ^5.2.1
+  jose: ^5.9.6
+  framer-motion: ^12.23.24
+  grammy: ^1.32.0
+  ky: ^1.7.4
+  lucide-react: ^0.545.0
+  next: ^15.1.0
+  pino: ^9.14.0
+  # Must be this exact version because expo requires it
+  react: 19.1.0
+  # Must be this exact version because expo requires it
+  react-dom: 19.1.0
+  tailwind-merge: ^3.3.1
+  tailwindcss: ^4.1.14
+  tsx: ^4.21.0
+  vite: ^7.3.2
+  wouter: ^3.3.5
+  zustand: ^5.0.2
+  zod: ^3.25.76
+
+autoInstallPeers: false
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild
+  - msw
+  - unrs-resolver
+  - argon2
+  - msgpackr-extract
+  - protobufjs
+  - sharp
+
+overrides:
+  # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
+  "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
+  # Force orval to use version 8.27.0 to avoid @orval/swr@8.28.0 which doesn't exist
+  orval: "8.27.0"
+  # Fix esbuild-plugin-pino peer dependency issue
+  esbuild-plugin-pino: "npm:esbuild-plugin-pino@2.3.3"

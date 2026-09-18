@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/iam",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@workspace/kernel": "workspace:*",
+    "@workspace/contracts": "workspace:*",
+    "@workspace/platform": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "express": "^5.2.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/express": "^5.0.6"
+  }
+}
