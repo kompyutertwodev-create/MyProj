@@ -1,6 +1,8 @@
-import type { Router } from 'express';
+﻿import type { Router } from 'express';
 import { createAuthGuard, createIamRouter } from '@workspace/iam';
+import { createTenantRouter } from '@workspace/tenant';
 import type { IamContainer } from './iam-container.js';
+import type { TenantContainer } from './tenant-container.js';
 
 export function createIamRouterFromContainer(container: IamContainer): Router {
   return createIamRouter({
@@ -35,5 +37,18 @@ export function createIamRouterFromContainer(container: IamContainer): Router {
       getPolicy: container.getPolicy,
       service: container.policyService,
     },
+  });
+}
+
+export function createTenantRouterFromContainer(
+  container: TenantContainer,
+  authGuard: ReturnType<typeof createAuthGuard>
+): Router {
+  return createTenantRouter({
+    createTenant: container.createTenant,
+    getTenant: container.getTenant,
+    listTenants: container.listTenants,
+    listMembers: container.listMembers,
+    authGuard,
   });
 }

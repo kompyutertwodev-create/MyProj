@@ -27,9 +27,10 @@ import {
   User,
   UserStatus,
 } from '../../../modules/iam/src/domain/index.js';
+import { ok } from '@workspace/kernel';
 
 const provider = {
-  provider: 'google',
+  provider: 'google' as OAuthProvider,
   getRedirectUri: () => 'https://example.com/api/v1/auth/oauth/google/callback',
   getAuthorizationUrl: (state: string) =>
     `https://provider.example/authorize?state=${encodeURIComponent(state)}`,
@@ -46,19 +47,31 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
 }
 
 before(async () => {
+  const stateRepository = new InMemoryOAuthStateRepository();
   const registry = new OAuthProviderRegistry();
   registry.register(provider);
 
-  const router = createOAuthRouter(
-    registry,
-    new InMemoryOAuthStateRepository(),
-    {
+  const router = createOAuthRouter({
+    providerRegistry: registry,
+    stateRepository,
+    initiateOAuth: {
+      execute: async (command: { provider: string }) => {
+        const state = `test-state-${command.provider}-${Date.now()}`;
+        await stateRepository.save(state, command.provider as OAuthProvider, new Date(Date.now() + 10 * 60 * 1000));
+        return ok({
+          authorizationUrl: `https://provider.example/authorize?state=${encodeURIComponent(state)}`,
+          state,
+          provider: command.provider as OAuthProvider,
+        });
+      },
+    } as never,
+    oauthLogin: {
       handle: async () => {
         throw new OAuthProviderError('Google', 'test exchange');
       },
     } as never,
-    { handle: async () => undefined } as never
-  );
+    linkSocialAccount: { handle: async () => undefined } as never,
+  });
   const app = express();
   app.use(cookieParser());
   app.use(express.json());
@@ -94,7 +107,8 @@ test('stores OAuth state server-side and consumes it exactly once', async () => 
     }
   );
   assert.equal(callback.status, 502);
-  assert.equal((await callback.json()).error.code, 'OAUTH_PROVIDER_ERROR');
+  const callbackBody = await callback.json();
+  assert.equal(callbackBody.error.code, 'OAUTH_PROVIDER_ERROR');
 
   const replay = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state!)}`,
@@ -108,7 +122,11 @@ test('stores OAuth state server-side and consumes it exactly once', async () => 
 
 test('rejects a valid OAuth state without its browser-bound cookie', async () => {
   const initiated = await request('/google');
-  const location = new URL(initiated.headers.get('location')!);
+  const locationHeader = initiated.headers.get('location');
+  if (!locationHeader) {
+    throw new Error('Expected redirect location header');
+  }
+  const location = new URL(locationHeader);
   const state = location.searchParams.get('state')!;
 
   const callback = await request(
@@ -121,15 +139,30 @@ test('rejects a valid OAuth state without its browser-bound cookie', async () =>
 test('rejects an expired server-side OAuth state', async () => {
   const registry = new OAuthProviderRegistry();
   registry.register(provider);
-  const stateRepository = new InMemoryOAuthStateRepository();
-  await stateRepository.save('expired-state', 'google', new Date(Date.now() - 1));
+  const expiredStateRepository = new InMemoryOAuthStateRepository();
+  await expiredStateRepository.save('expired-state', 'google' as OAuthProvider, new Date(Date.now() - 1));
 
-  const router = createOAuthRouter(
-    registry,
-    stateRepository,
-    { handle: async () => ({}) } as never,
-    { handle: async () => undefined } as never
-  );
+  const router = createOAuthRouter({
+    providerRegistry: registry,
+    stateRepository: expiredStateRepository,
+    initiateOAuth: {
+      execute: async (command: { provider: string }) => {
+        const state = `test-state-${command.provider}-${Date.now()}`;
+        await expiredStateRepository.save(state, command.provider as OAuthProvider, new Date(Date.now() + 10 * 60 * 1000));
+        return ok({
+          authorizationUrl: `https://provider.example/authorize?state=${encodeURIComponent(state)}`,
+          state,
+          provider: command.provider as OAuthProvider,
+        });
+      },
+    } as never,
+    oauthLogin: {
+      handle: async () => {
+        throw new OAuthProviderError('Google', 'test exchange');
+      },
+    } as never,
+    linkSocialAccount: { handle: async () => undefined } as never,
+  });
   const app = express();
   app.use(cookieParser());
   app.use(router);
@@ -139,6 +172,7 @@ test('rejects an expired server-side OAuth state', async () => {
   const isolatedAddress = isolatedServer.address() as AddressInfo;
 
   try {
+    // Directly test with the pre-expired state
     const callback = await fetch(
       `http://127.0.0.1:${isolatedAddress.port}/google/callback?code=code&state=expired-state`,
       { headers: { cookie: 'oauth_state=expired-state' } }

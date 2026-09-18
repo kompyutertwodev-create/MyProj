@@ -10,7 +10,6 @@ export const OAuthProviderSchema = z.enum([
 ]);
 
 export const OAuthCallbackRequestSchema = z.object({
-  provider: z.string().transform((val) => OAuthProviderSchema.parse(val)),
   code: z.string().min(1, 'Authorization code is required'),
   state: z.string().optional(),
   error: z.string().optional(),

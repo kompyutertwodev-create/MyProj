@@ -1,4 +1,4 @@
-import {
+﻿import {
   createLogger,
   type Logger,
   createPostgresDatabase,
@@ -7,14 +7,19 @@ import {
 import {
   createIamContainer,
   createIamRouterFromContainer,
+  createTenantContainer,
+  createTenantRouterFromContainer,
   type IamContainerOptions,
 } from './container/index.js';
+import { createAuthGuard } from '@workspace/iam';
 
 export interface AppContainer {
   logger: Logger;
   database: PostgresDatabase;
   iamRouter: ReturnType<typeof createIamRouterFromContainer>;
   iamContainer: Awaited<ReturnType<typeof createIamContainer>>;
+  tenantRouter: ReturnType<typeof createTenantRouterFromContainer>;
+  tenantContainer: ReturnType<typeof createTenantContainer>;
 }
 
 export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> {
@@ -24,11 +29,29 @@ export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> 
 export async function createContainer(options: ContainerOptions): Promise<AppContainer> {
   const logger = createLogger('api');
   const database = createPostgresDatabase(options.databaseUrl);
+
   const iamContainer = await createIamContainer({
     ...options,
     database,
   });
   const iamRouter = createIamRouterFromContainer(iamContainer);
 
-  return { logger, database, iamRouter, iamContainer };
+  const tenantContainer = await createTenantContainer({
+    database,
+    events: iamContainer.events,
+    runMigrations: false,
+  });
+  const tenantRouter = createTenantRouterFromContainer(
+    tenantContainer,
+    createAuthGuard(iamContainer.tokenService)
+  );
+
+  return {
+    logger,
+    database,
+    iamRouter,
+    iamContainer,
+    tenantRouter,
+    tenantContainer,
+  };
 }

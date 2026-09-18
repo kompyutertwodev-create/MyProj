@@ -20,7 +20,7 @@ import {
   OAuthCallbackRequestSchema,
   LinkAccountRequestSchema,
   TelegramAuthRequestSchema,
-} from '../validators/index.js';
+} from '../validators/oauth/index.js';
 
 interface AuthenticatedRequest extends Request {
   user?: { userId: string; roles: string[] };

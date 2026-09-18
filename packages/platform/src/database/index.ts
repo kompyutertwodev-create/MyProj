@@ -18,3 +18,5 @@ export type { TransactionalDatabase } from './drizzle/DrizzleTransaction.js';
 export { createPostgresDatabase, checkPostgresDatabaseHealth } from './drizzle/PostgresDatabase.js';
 
 export type { PostgresDatabase, DatabaseHealthResult } from './drizzle/PostgresDatabase.js';
+
+export { runSqlMigrations } from './drizzle/SqlMigrationRunner.js';

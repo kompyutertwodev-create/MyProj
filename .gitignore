@@ -76,3 +76,6 @@ lerna-debug.log*
 
 # Local Git metadata backup
 .git.backup/
+
+# Temporary test scripts
+apps/api/test-db.mjs

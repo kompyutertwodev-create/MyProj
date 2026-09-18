@@ -43,7 +43,10 @@ import {
   OutboxEventBus,
   OutboxEventDispatcher,
   type PostgresDatabase,
+  runSqlMigrations,
 } from '@workspace/platform';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 export interface IamContainer {
   users: DrizzleUserRepository;
@@ -86,10 +89,19 @@ export interface IamContainer {
 export interface IamContainerOptions {
   database: PostgresDatabase;
   startBackgroundWorkers?: boolean;
+  runMigrations?: boolean;
 }
 
 export async function createIamContainer(options: IamContainerOptions): Promise<IamContainer> {
   const { db } = options.database;
+
+  // Run migrations before seeding if not disabled
+  if (options.runMigrations !== false) {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const migrationsDir = join(__dirname, '../../../../modules/iam/src/infrastructure/database/migrations');
+    await runSqlMigrations(options.database, migrationsDir);
+  }
 
   const users = new DrizzleUserRepository(db);
   const roles = new DrizzleRoleRepository(db);
