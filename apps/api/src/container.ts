@@ -9,6 +9,8 @@ import {
   createIamRouterFromContainer,
   createTenantContainer,
   createTenantRouterFromContainer,
+  createAuditContainer,
+  createAuditRouterFromContainer,
   type IamContainerOptions,
 } from './container/index.js';
 import { createAuthGuard } from '@workspace/iam';
@@ -20,6 +22,8 @@ export interface AppContainer {
   iamContainer: Awaited<ReturnType<typeof createIamContainer>>;
   tenantRouter: ReturnType<typeof createTenantRouterFromContainer>;
   tenantContainer: ReturnType<typeof createTenantContainer>;
+  auditRouter: ReturnType<typeof createAuditRouterFromContainer>;
+  auditContainer: ReturnType<typeof createAuditContainer>;
 }
 
 export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> {
@@ -39,10 +43,18 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
   const tenantContainer = await createTenantContainer({
     database,
     events: iamContainer.events,
-    runMigrations: false,
   });
   const tenantRouter = createTenantRouterFromContainer(
     tenantContainer,
+    createAuthGuard(iamContainer.tokenService)
+  );
+
+  const auditContainer = createAuditContainer({
+    database,
+    eventBus: iamContainer.events,
+  });
+  const auditRouter = createAuditRouterFromContainer(
+    auditContainer,
     createAuthGuard(iamContainer.tokenService)
   );
 
@@ -53,5 +65,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     iamContainer,
     tenantRouter,
     tenantContainer,
+    auditRouter,
+    auditContainer,
   };
 }

@@ -8,4 +8,13 @@ export {
   type TenantContainer,
   type TenantContainerOptions,
 } from './tenant-container.js';
-export { createIamRouterFromContainer, createTenantRouterFromContainer } from './controllers.js';
+export {
+  createAuditContainer,
+  type AuditContainer,
+  type AuditContainerOptions,
+} from './audit-container.js';
+export {
+  createIamRouterFromContainer,
+  createTenantRouterFromContainer,
+  createAuditRouterFromContainer,
+} from './controllers.js';

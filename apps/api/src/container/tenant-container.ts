@@ -6,11 +6,7 @@
   ListMembersHandler,
   ListTenantsHandler,
 } from '@workspace/tenant';
-import type { PostgresDatabase } from '@workspace/platform';
-import type { OutboxEventBus } from '@workspace/platform';
-import { runSqlMigrations } from '@workspace/platform';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import type { PostgresDatabase, OutboxEventBus } from '@workspace/platform';
 
 export interface TenantContainer {
   tenants: DrizzleTenantRepository;
@@ -24,19 +20,10 @@ export interface TenantContainer {
 export interface TenantContainerOptions {
   database: PostgresDatabase;
   events: OutboxEventBus;
-  runMigrations?: boolean;
 }
 
-export async function createTenantContainer(options: TenantContainerOptions): Promise<TenantContainer> {
+export function createTenantContainer(options: TenantContainerOptions): TenantContainer {
   const { db } = options.database;
-
-  // Run tenant migrations if not disabled
-  if (options.runMigrations !== false) {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const migrationsDir = join(__dirname, '../../../../modules/tenant/src/infrastructure/database/migrations');
-    await runSqlMigrations(options.database, migrationsDir);
-  }
 
   const tenants = new DrizzleTenantRepository(db);
   const members = new DrizzleMemberRepository(db);

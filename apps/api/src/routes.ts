@@ -5,8 +5,7 @@ import { createHealthRouter } from './health';
 import type { AppContainer } from './container';
 
 /**
- * This is the composition root's HTTP surface, versioned under /api/v1.
- *
+ * Composition root HTTP surface, versioned under /api/v1.
  * Each module owns its own router; this file only mounts them.
  */
 export function createRoutes(container: AppContainer): IRouter {
@@ -22,6 +21,9 @@ export function createRoutes(container: AppContainer): IRouter {
 
   // Tenant owns tenant and membership routes.
   v1.use('/tenants', container.tenantRouter);
+
+  // Audit owns audit log routes.
+  v1.use('/audit-logs', container.auditRouter);
 
   // The composition root mounts this router at /api in server.ts.
   router.use('/v1', v1);

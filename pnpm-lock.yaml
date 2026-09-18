@@ -195,6 +195,9 @@ importers:
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
+      '@workspace/audit':
+        specifier: workspace:*
+        version: link:../../modules/audit
       '@workspace/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -494,7 +497,19 @@ importers:
       '@workspace/platform':
         specifier: workspace:*
         version: link:../../packages/platform
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(pg@8.23.0)
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
     devDependencies:
+      '@types/express':
+        specifier: ^5.0.6
+        version: 5.0.6
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.5
