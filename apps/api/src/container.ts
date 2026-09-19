@@ -1,4 +1,4 @@
-﻿import {
+import {
   createLogger,
   type Logger,
   createPostgresDatabase,
@@ -15,6 +15,8 @@ import {
   createAuditRouterFromContainer,
   createNotificationContainer,
   createNotificationRouterFromContainer,
+  createAccessControlContainer,
+  createAccessControlRouterFromContainer,
   type IamContainerOptions,
 } from './container/index.js';
 import { ApiContactResolver } from './container/contact-resolver.js';
@@ -31,6 +33,8 @@ export interface AppContainer {
   auditContainer: ReturnType<typeof createAuditContainer>;
   notificationRouter: ReturnType<typeof createNotificationRouterFromContainer>;
   notificationContainer: ReturnType<typeof createNotificationContainer>;
+  accessControlRouter: ReturnType<typeof createAccessControlRouterFromContainer>;
+  accessControlContainer: Awaited<ReturnType<typeof createAccessControlContainer>>;
 }
 
 export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> {
@@ -113,6 +117,15 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     createAuthGuard(iamContainer.tokenService)
   );
 
+  // Access-control вЂ” self-contained RBAC + ABAC module.
+  const accessControlContainer = await createAccessControlContainer({
+    database,
+  });
+  const accessControlRouter = createAccessControlRouterFromContainer(
+    accessControlContainer,
+    createAuthGuard(iamContainer.tokenService)
+  );
+
   return {
     logger,
     database,
@@ -124,5 +137,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     auditContainer,
     notificationRouter,
     notificationContainer,
+    accessControlRouter,
+    accessControlContainer,
   };
 }

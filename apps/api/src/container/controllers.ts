@@ -1,12 +1,14 @@
-﻿import type { Router } from 'express';
+import type { Router } from 'express';
 import { createAuthGuard, createIamRouter } from '@workspace/iam';
 import { createTenantRouter } from '@workspace/tenant';
 import { createAuditRouter } from '@workspace/audit';
 import { createNotificationRouter } from '@workspace/notification';
+import { createAccessControlRouter } from '@workspace/access-control';
 import type { IamContainer } from './iam-container.js';
 import type { TenantContainer } from './tenant-container.js';
 import type { AuditContainer } from './audit-container.js';
 import type { NotificationContainer } from './notification-container.js';
+import type { AccessControlContainer } from './access-control-container.js';
 
 export function createIamRouterFromContainer(container: IamContainer): Router {
   return createIamRouter({
@@ -74,6 +76,41 @@ export function createNotificationRouterFromContainer(
   return createNotificationRouter({
     sendNotification: container.sendNotification,
     listNotifications: container.listNotifications,
+    authGuard,
+  });
+}
+
+/**
+ * Router factory for the access-control module.
+ *
+ * `authGuard` is injected by the composition root so `access-control`
+ * remains independent of `iam`: it only knows it needs *some* middleware
+ * that authenticates the caller.
+ */
+export function createAccessControlRouterFromContainer(
+  container: AccessControlContainer,
+  authGuard: ReturnType<typeof createAuthGuard>
+): Router {
+  return createAccessControlRouter({
+    createRole: container.createRole,
+    updateRole: container.updateRole,
+    deleteRole: container.deleteRole,
+    addPermissionToRole: container.addPermissionToRole,
+    removePermissionFromRole: container.removePermissionFromRole,
+    assignRole: container.assignRole,
+    revokeRole: container.revokeRole,
+    createPolicy: container.createPolicy,
+    updatePolicy: container.updatePolicy,
+    deletePolicy: container.deletePolicy,
+    activatePolicy: container.activatePolicy,
+    deactivatePolicy: container.deactivatePolicy,
+    getRole: container.getRole,
+    listRoles: container.listRoles,
+    listUserRoles: container.listUserRoles,
+    listRoleAssignments: container.listRoleAssignments,
+    getPolicy: container.getPolicy,
+    listPolicies: container.listPolicies,
+    checkPermission: container.checkPermission,
     authGuard,
   });
 }

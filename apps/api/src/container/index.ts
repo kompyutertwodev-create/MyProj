@@ -1,4 +1,4 @@
-﻿export {
+export {
   createIamContainer,
   type IamContainer,
   type IamContainerOptions,
@@ -19,8 +19,14 @@ export {
   type NotificationContainerOptions,
 } from './notification-container.js';
 export {
+  createAccessControlContainer,
+  type AccessControlContainer,
+  type AccessControlContainerOptions,
+} from './access-control-container.js';
+export {
   createIamRouterFromContainer,
   createTenantRouterFromContainer,
   createAuditRouterFromContainer,
   createNotificationRouterFromContainer,
+  createAccessControlRouterFromContainer,
 } from './controllers.js';

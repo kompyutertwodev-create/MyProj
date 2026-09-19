@@ -1,4 +1,4 @@
-﻿import { Router, type IRouter } from 'express';
+import { Router, type IRouter } from 'express';
 
 import { createHealthRouter } from './health';
 
@@ -15,7 +15,7 @@ export function createRoutes(container: AppContainer): IRouter {
   // Health is a composition-root concern.
   router.use(createHealthRouter(container.database));
 
-  // IAM owns identity, auth, users, RBAC and ABAC policy routes.
+  // IAM owns identity, auth and users.
   v1.use('/', container.iamRouter);
   v1.use('/identity', container.iamRouter);
 
@@ -27,6 +27,11 @@ export function createRoutes(container: AppContainer): IRouter {
 
   // Notification owns notification routes.
   v1.use('/notifications', container.notificationRouter);
+
+  // Access-control owns RBAC + ABAC (roles, policies, assignments, checks).
+  // Mounted under its own prefix so it can coexist with the legacy IAM
+  // RBAC routes while consumers migrate.
+  v1.use('/access-control', container.accessControlRouter);
 
   // The composition root mounts this router at /api in server.ts.
   router.use('/v1', v1);
