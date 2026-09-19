@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import type { AddressInfo } from 'node:net';
@@ -41,7 +40,7 @@ async function request(path: string, init?: RequestInit): Promise<Response> {
   return fetch(`${baseUrl}${path}`, { redirect: 'manual', ...init });
 }
 
-before(async () => {
+beforeAll(async () => {
   const stateRepository = new InMemoryOAuthStateRepository();
   const registry = new OAuthProviderRegistry();
   registry.register(provider);
@@ -83,7 +82,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 });
 
-after(async () => {
+afterAll(async () => {
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -91,28 +90,29 @@ after(async () => {
 
 test('stores OAuth state server-side and consumes it exactly once', async () => {
   const initiated = await request('/google');
-  assert.equal(initiated.status, 302);
+  expect(initiated.status).toBe(302);
 
   const location = new URL(initiated.headers.get('location')!);
   const state = location.searchParams.get('state');
   const cookie = initiated.headers.get('set-cookie');
-  assert.ok(state);
-  assert.ok(cookie);
+  expect(state).toBeTruthy();
+  expect(cookie).toBeTruthy();
 
   const callback = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state!)}`,
     { headers: { cookie: cookie!.split(';')[0] } },
   );
-  assert.equal(callback.status, 502);
-  const callbackBody = await callback.json();
-  assert.equal(callbackBody.error.code, 'OAUTH_PROVIDER_ERROR');
+  expect(callback.status).toBe(502);
+  const callbackBody = (await callback.json()) as { error: { code: string } };
+  expect(callbackBody.error.code).toBe('OAUTH_PROVIDER_ERROR');
 
   const replay = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state!)}`,
     { headers: { cookie: cookie!.split(';')[0] } },
   );
-  assert.equal(replay.status, 400);
-  assert.equal((await replay.json()).error.code, 'OAUTH_STATE_INVALID');
+  expect(replay.status).toBe(400);
+  const replayBody = (await replay.json()) as { error: { code: string } };
+  expect(replayBody.error.code).toBe('OAUTH_STATE_INVALID');
 });
 
 test('rejects a valid OAuth state without its browser-bound cookie', async () => {
@@ -127,8 +127,9 @@ test('rejects a valid OAuth state without its browser-bound cookie', async () =>
   const callback = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state)}`,
   );
-  assert.equal(callback.status, 400);
-  assert.equal((await callback.json()).error.code, 'OAUTH_STATE_INVALID');
+  expect(callback.status).toBe(400);
+  const body = (await callback.json()) as { error: { code: string } };
+  expect(body.error.code).toBe('OAUTH_STATE_INVALID');
 });
 
 test('rejects an expired server-side OAuth state', async () => {
@@ -179,8 +180,9 @@ test('rejects an expired server-side OAuth state', async () => {
       `http://127.0.0.1:${isolatedAddress.port}/google/callback?code=code&state=expired-state`,
       { headers: { cookie: 'oauth_state=expired-state' } },
     );
-    assert.equal(callback.status, 400);
-    assert.equal((await callback.json()).error.code, 'OAUTH_STATE_INVALID');
+    expect(callback.status).toBe(400);
+    const body = (await callback.json()) as { error: { code: string } };
+    expect(body.error.code).toBe('OAUTH_STATE_INVALID');
   } finally {
     await new Promise<void>((resolve, reject) => {
       isolatedServer.close((error) => (error ? reject(error) : resolve()));
@@ -189,15 +191,13 @@ test('rejects an expired server-side OAuth state', async () => {
 });
 
 test('requires absolute redirect URIs for OAuth providers', () => {
-  assert.throws(
-    () =>
-      new GoogleOAuthProvider({
-        clientId: 'client',
-        clientSecret: 'secret',
-        redirectUri: '/api/v1/auth/oauth/google/callback',
-      }),
-    /absolute URL/,
-  );
+  expect(() =>
+    new GoogleOAuthProvider({
+      clientId: 'client',
+      clientSecret: 'secret',
+      redirectUri: '/api/v1/auth/oauth/google/callback',
+    }),
+  ).toThrow(/absolute URL/);
 });
 
 test('links a verified social email to the existing local user', async () => {
@@ -252,16 +252,16 @@ test('links a verified social email to the existing local user', async () => {
     deviceInfo: { ipAddress: '127.0.0.1', userAgent: 'node:test' },
   });
 
-  assert.equal(result.isNewUser, false);
-  assert.equal(result.user.id, existingUser.id.value);
-  assert.equal(result.user.email, 'unified@example.com');
+  expect(result.isNewUser).toBe(false);
+  expect(result.user.id).toBe(existingUser.id.value);
+  expect(result.user.email).toBe('unified@example.com');
   const linked = await socialIdentities.findByProvider(
     OAuthProvider.Google,
     'google-user-1',
   );
-  assert.equal(linked?.userId, existingUser.id.value);
+  expect(linked?.userId).toBe(existingUser.id.value);
   const usersWithSameEmail = await users.findByEmail('unified@example.com');
-  assert.equal(usersWithSameEmail?.id.value, existingUser.id.value);
+  expect(usersWithSameEmail?.id.value).toBe(existingUser.id.value);
 });
 
 test('does not auto-merge an unverified social email', async () => {
@@ -292,12 +292,11 @@ test('does not auto-merge an unverified social email', async () => {
     { hash: async () => 'hash' } as never,
   );
 
-  await assert.rejects(
+  await expect(
     handler.handle({
       provider: OAuthProvider.GitHub,
       code: 'provider-code',
       deviceInfo: { ipAddress: '127.0.0.1', userAgent: 'node:test' },
     }),
-    /verified social email is required/,
-  );
+  ).rejects.toThrow(/verified social email is required/);
 });

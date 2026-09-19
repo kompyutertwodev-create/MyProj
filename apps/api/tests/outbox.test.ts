@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { expect, test } from 'vitest';
 import {
   OutboxEventBus,
   OutboxEventDispatcher,
@@ -68,7 +67,7 @@ test('OutboxEventBus durably enqueues single and batched events', async () => {
   await bus.publish(event);
   await bus.publishAll([event]);
 
-  assert.deepEqual(store.enqueued, [event, event]);
+  expect(store.enqueued).toEqual([event, event]);
 });
 
 test('dispatcher marks delivered events as published', async () => {
@@ -77,10 +76,10 @@ test('dispatcher marks delivered events as published', async () => {
   const transport = new FakeTransport();
   const dispatcher = new OutboxEventDispatcher(store, transport);
 
-  assert.equal(await dispatcher.dispatchOnce(), 1);
-  assert.deepEqual(transport.published, [event]);
-  assert.deepEqual(store.published, [event.eventId]);
-  assert.deepEqual(store.failed, []);
+  expect(await dispatcher.dispatchOnce()).toBe(1);
+  expect(transport.published).toEqual([event]);
+  expect(store.published).toEqual([event.eventId]);
+  expect(store.failed).toEqual([]);
 });
 
 test('dispatcher returns failed deliveries to retry state', async () => {
@@ -91,10 +90,10 @@ test('dispatcher returns failed deliveries to retry state', async () => {
     new FakeTransport(new Error('broker offline'))
   );
 
-  assert.equal(await dispatcher.dispatchOnce(), 1);
-  assert.deepEqual(store.published, []);
-  assert.equal(store.failed.length, 1);
-  assert.equal(store.failed[0]?.id, event.eventId);
-  assert.equal(store.failed[0]?.error, 'broker offline');
-  assert.ok(store.failed[0]?.retryAt.getTime() > Date.now());
+  expect(await dispatcher.dispatchOnce()).toBe(1);
+  expect(store.published).toEqual([]);
+  expect(store.failed.length).toBe(1);
+  expect(store.failed[0]?.id).toBe(event.eventId);
+  expect(store.failed[0]?.error).toBe('broker offline');
+  expect(store.failed[0]?.retryAt.getTime()).toBeGreaterThan(Date.now());
 });

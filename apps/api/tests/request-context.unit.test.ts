@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import express, { type Express } from 'express';
@@ -69,7 +68,7 @@ function createApp(): Express {
   return app;
 }
 
-before(async () => {
+beforeAll(async () => {
   server = await new Promise<Server>((resolve) => {
     const listener = createApp().listen(0, '127.0.0.1', () => resolve(listener));
   });
@@ -77,7 +76,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 });
 
-after(async () => {
+afterAll(async () => {
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -86,8 +85,8 @@ after(async () => {
 test('getEventContext() returns EMPTY_EVENT_CONTEXT outside a request', () => {
   const ctx = getRequestContext();
   const evt = getEventContext();
-  assert.equal(ctx, undefined);
-  assert.deepEqual(evt, EMPTY_EVENT_CONTEXT);
+  expect(ctx).toBeUndefined();
+  expect(evt).toEqual(EMPTY_EVENT_CONTEXT);
 });
 
 test('getRequestContext() is populated inside a request', async () => {
@@ -100,10 +99,10 @@ test('getRequestContext() is populated inside a request', async () => {
     actorId: string | null;
     tenantId: string | null;
   };
-  assert.equal(body.requestId, 'trace-ctx-1');
-  assert.equal(body.correlationId, 'trace-ctx-1');
-  assert.equal(body.actorId, null);
-  assert.equal(body.tenantId, null);
+  expect(body.requestId).toBe('trace-ctx-1');
+  expect(body.correlationId).toBe('trace-ctx-1');
+  expect(body.actorId).toBeNull();
+  expect(body.tenantId).toBeNull();
 });
 
 test('correlationId defaults to the generated request id', async () => {
@@ -112,8 +111,8 @@ test('correlationId defaults to the generated request id', async () => {
     requestId: string;
     correlationId: string;
   };
-  assert.match(body.requestId, /^[0-9a-f-]{36}$/i);
-  assert.equal(body.correlationId, body.requestId);
+  expect(body.requestId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(body.correlationId).toBe(body.requestId);
 });
 
 test('withEventContext() merges the override over the ambient context', async () => {
@@ -125,9 +124,9 @@ test('withEventContext() merges the override over the ambient context', async ()
     actorId: string;
     tenantId: string;
   };
-  assert.equal(body.correlationId, 'trace-merge-1');
-  assert.equal(body.actorId, 'user-42');
-  assert.equal(body.tenantId, 'tenant-7');
+  expect(body.correlationId).toBe('trace-merge-1');
+  expect(body.actorId).toBe('user-42');
+  expect(body.tenantId).toBe('tenant-7');
 });
 
 test('context survives nested async hops', async () => {
@@ -139,7 +138,7 @@ test('context survives nested async hops', async () => {
     second: string;
     third: string;
   };
-  assert.equal(body.first, 'trace-async-1');
-  assert.equal(body.second, 'trace-async-1');
-  assert.equal(body.third, 'trace-async-1');
+  expect(body.first).toBe('trace-async-1');
+  expect(body.second).toBe('trace-async-1');
+  expect(body.third).toBe('trace-async-1');
 });

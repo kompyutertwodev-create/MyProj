@@ -1,5 +1,4 @@
-﻿import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { expect, test } from 'vitest';
 import {
   Notification,
   NotificationChannel,
@@ -48,13 +47,13 @@ test('Notification.create() builds a Pending notification', () => {
     subject: 'Welcome',
     body: 'Hello there',
   });
-  assert.equal(result.isOk(), true);
+  expect(result.isOk()).toBe(true);
   const n = result.value;
-  assert.equal(n.recipientId.value, 'user-1');
-  assert.equal(n.channel, NotificationChannel.Email);
-  assert.equal(n.status, NotificationStatus.Pending);
-  assert.equal(n.subject, 'Welcome');
-  assert.equal(n.sentAt, null);
+  expect(n.recipientId.value).toBe('user-1');
+  expect(n.channel).toBe(NotificationChannel.Email);
+  expect(n.status).toBe(NotificationStatus.Pending);
+  expect(n.subject).toBe('Welcome');
+  expect(n.sentAt).toBeNull();
 });
 
 test('Notification.create() rejects empty subject and body', () => {
@@ -64,8 +63,8 @@ test('Notification.create() rejects empty subject and body', () => {
     subject: '   ',
     body: 'body',
   });
-  assert.equal(badSubject.isErr(), true);
-  assert.equal(badSubject.error.code, 'NOTIFICATION_SUBJECT_EMPTY');
+  expect(badSubject.isErr()).toBe(true);
+  expect(badSubject.error.code).toBe('NOTIFICATION_SUBJECT_EMPTY');
 
   const badBody = Notification.create({
     recipientId: 'user-1',
@@ -73,8 +72,8 @@ test('Notification.create() rejects empty subject and body', () => {
     subject: 'subj',
     body: '',
   });
-  assert.equal(badBody.isErr(), true);
-  assert.equal(badBody.error.code, 'NOTIFICATION_BODY_EMPTY');
+  expect(badBody.isErr()).toBe(true);
+  expect(badBody.error.code).toBe('NOTIFICATION_BODY_EMPTY');
 });
 
 test('Notification.markAsSent() transitions Pending -> Sent', () => {
@@ -85,9 +84,9 @@ test('Notification.markAsSent() transitions Pending -> Sent', () => {
     body: 'B',
   }).getOrThrow();
 
-  assert.equal(n.markAsSent().isOk(), true);
-  assert.equal(n.status, NotificationStatus.Sent);
-  assert.ok(n.sentAt instanceof Date);
+  expect(n.markAsSent().isOk()).toBe(true);
+  expect(n.status).toBe(NotificationStatus.Sent);
+  expect(n.sentAt).toBeInstanceOf(Date);
 });
 
 test('Notification.markAsFailed() transitions Pending -> Failed with reason', () => {
@@ -98,9 +97,9 @@ test('Notification.markAsFailed() transitions Pending -> Failed with reason', ()
     body: 'B',
   }).getOrThrow();
 
-  assert.equal(n.markAsFailed('smtp down').isOk(), true);
-  assert.equal(n.status, NotificationStatus.Failed);
-  assert.equal(n.errorMessage, 'smtp down');
+  expect(n.markAsFailed('smtp down').isOk()).toBe(true);
+  expect(n.status).toBe(NotificationStatus.Failed);
+  expect(n.errorMessage).toBe('smtp down');
 });
 
 // ---------------------------------------------------------------------------
@@ -118,13 +117,13 @@ test('SendNotificationHandler sends and persists a Sent notification', async () 
     body: 'Hello',
   });
 
-  assert.equal(result.isOk(), true);
-  assert.equal(result.value.status, NotificationStatus.Sent);
-  assert.equal(emailSender.sent.length, 1);
+  expect(result.isOk()).toBe(true);
+  expect(result.value.status).toBe(NotificationStatus.Sent);
+  expect(emailSender.sent.length).toBe(1);
 
   const persisted = await repository.findById(result.value.notificationId);
-  assert.ok(persisted);
-  assert.equal(persisted.status, NotificationStatus.Sent);
+  expect(persisted).toBeTruthy();
+  expect(persisted!.status).toBe(NotificationStatus.Sent);
 });
 
 test('SendNotificationHandler records a Failed notification when sender fails', async () => {
@@ -138,14 +137,14 @@ test('SendNotificationHandler records a Failed notification when sender fails', 
     body: 'Hello',
   });
 
-  assert.equal(result.isOk(), true);
-  assert.equal(result.value.status, NotificationStatus.Failed);
-  assert.equal(result.value.errorMessage, 'smtp down');
-  assert.equal(emailSender.sent.length, 0);
+  expect(result.isOk()).toBe(true);
+  expect(result.value.status).toBe(NotificationStatus.Failed);
+  expect(result.value.errorMessage).toBe('smtp down');
+  expect(emailSender.sent.length).toBe(0);
 
   const persisted = await repository.findById(result.value.notificationId);
-  assert.ok(persisted);
-  assert.equal(persisted.status, NotificationStatus.Failed);
+  expect(persisted).toBeTruthy();
+  expect(persisted!.status).toBe(NotificationStatus.Failed);
 });
 
 test('SendNotificationHandler returns an error when channel has no sender', async () => {
@@ -161,8 +160,8 @@ test('SendNotificationHandler returns an error when channel has no sender', asyn
     body: 'B',
   });
 
-  assert.equal(result.isErr(), true);
-  assert.equal(result.error.code, 'CHANNEL_NOT_CONFIGURED');
+  expect(result.isErr()).toBe(true);
+  expect(result.error.code).toBe('CHANNEL_NOT_CONFIGURED');
 });
 
 test('SendNotificationHandler rejects invalid contact', async () => {
@@ -174,8 +173,8 @@ test('SendNotificationHandler rejects invalid contact', async () => {
     subject: 'S',
     body: 'B',
   });
-  assert.equal(result.isErr(), true);
-  assert.equal(result.error.code, 'VALIDATION_ERROR');
+  expect(result.isErr()).toBe(true);
+  expect(result.error.code).toBe('VALIDATION_ERROR');
 });
 
 // ---------------------------------------------------------------------------
@@ -197,13 +196,13 @@ test('ListNotificationsHandler paginates results', async () => {
   }
 
   const page1 = await list.execute({ page: 1, pageSize: 2 });
-  assert.equal(page1.items.length, 2);
-  assert.equal(page1.total, 5);
-  assert.equal(page1.hasNextPage, true);
+  expect(page1.items.length).toBe(2);
+  expect(page1.total).toBe(5);
+  expect(page1.hasNextPage).toBe(true);
 
   const page3 = await list.execute({ page: 3, pageSize: 2 });
-  assert.equal(page3.items.length, 1);
-  assert.equal(page3.hasNextPage, false);
+  expect(page3.items.length).toBe(1);
+  expect(page3.hasNextPage).toBe(false);
 });
 
 test('ListNotificationsHandler filters by recipientId and channel', async () => {
@@ -226,15 +225,15 @@ test('ListNotificationsHandler filters by recipientId and channel', async () => 
   });
 
   const byRecipient = await list.execute({ page: 1, pageSize: 10, recipientId: 'user-a' });
-  assert.equal(byRecipient.items.length, 1);
+  expect(byRecipient.items.length).toBe(1);
 
   const byChannel = await list.execute({
     page: 1,
     pageSize: 10,
     channel: NotificationChannel.Telegram,
   });
-  assert.equal(byChannel.items.length, 1);
-  assert.equal(byChannel.items[0]?.channel, NotificationChannel.Telegram);
+  expect(byChannel.items.length).toBe(1);
+  expect(byChannel.items[0]?.channel).toBe(NotificationChannel.Telegram);
 });
 
 // ---------------------------------------------------------------------------
@@ -274,23 +273,23 @@ test('NotificationDispatcher sends a welcome email for iam.UserRegistered', asyn
   );
 
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 1);
-  assert.equal(all[0]?.recipientId.value, 'user-42');
-  assert.equal(all[0]?.channel, NotificationChannel.Email);
-  assert.match(all[0]?.subject ?? '', /Welcome/i);
-  assert.equal(emailSender.sent.length, 1);
+  expect(all.length).toBe(1);
+  expect(all[0]?.recipientId.value).toBe('user-42');
+  expect(all[0]?.channel).toBe(NotificationChannel.Email);
+  expect(all[0]?.subject ?? '').toMatch(/Welcome/i);
+  expect(emailSender.sent.length).toBe(1);
 });
 
 test('NotificationDispatcher skips events with no matching template', async () => {
   const { dispatcher, repository } = makeDispatcher();
   await dispatcher.handle(makeEvent('unknown.Event', { userId: 'user-42' }));
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 0);
+  expect(all.length).toBe(0);
 });
 
 test('NotificationDispatcher skips events when contact cannot be resolved', async () => {
   const { dispatcher, repository } = makeDispatcher();
   await dispatcher.handle(makeEvent('iam.UserRegistered', { userId: 'unknown-user' }));
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 0);
+  expect(all.length).toBe(0);
 });

@@ -231,6 +231,31 @@ Batafsil: `docs/CONVENTIONS.md`
 
 ---
 
+## Faza 3.5 — Test runner (2026-09-20)
+
+**Bitta runner:** `vitest` — `node:test` **butunlay olib tashlandi**.
+
+### Test komandalari
+
+```bash
+# Root'dan — hamma testlar (watch mode)
+pnpm test
+
+# Root'dan — bir marta (CI uchun)
+pnpm exec vitest run
+
+# apps/api dan — faqat apps/api testlari
+cd apps/api && pnpm test
+
+# apps/api dan — watch mode
+cd apps/api && pnpm test:watch
+
+# Coverage
+pnpm test:coverage
+```
+
+---
+
 ## Fayl oxiri
 
 Bu fayl **`docs/HANDOFF.md`** ning **to'liq matni**.

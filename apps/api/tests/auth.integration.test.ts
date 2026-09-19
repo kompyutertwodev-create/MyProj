@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import { after, before, test } from 'node:test';
+import { afterAll, beforeAll, expect, test } from 'vitest';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createContainer } from '../src/container';
@@ -21,7 +20,7 @@ async function request(
   return { status: response.status, body: (await response.json()) as Record<string, any> };
 }
 
-before(async () => {
+beforeAll(async () => {
   const app = createServer(
     await createContainer({
       databaseUrl,
@@ -36,7 +35,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${address.port}`;
 });
 
-after(async () => {
+afterAll(async () => {
   await new Promise<void>((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));
   });
@@ -49,17 +48,17 @@ test('registers an active account and rejects duplicates', async () => {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  assert.equal(first.status, 200);
-  assert.equal(first.body.success, true);
-  assert.equal(first.body.data.email, email);
+  expect(first.status).toBe(200);
+  expect(first.body.success).toBe(true);
+  expect(first.body.data.email).toBe(email);
 
   const duplicate = await request('/api/v1/auth/register', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  assert.equal(duplicate.status, 409);
-  assert.equal(duplicate.body.error.code, 'CONFLICT');
+  expect(duplicate.status).toBe(409);
+  expect(duplicate.body.error.code).toBe('CONFLICT');
 });
 
 test('logs in, creates a persistent session, and logs out', async () => {
@@ -78,42 +77,40 @@ test('logs in, creates a persistent session, and logs out', async () => {
       },
     }),
   });
-  assert.equal(login.status, 200);
-  assert.equal(login.body.success, true);
-  assert.match(login.body.data.accessToken, /^ey/);
-  assert.match(login.body.data.refreshToken, /^ey/);
-  assert.match(login.body.data.sessionId, /^[0-9a-f-]{36}$/);
+  expect(login.status).toBe(200);
+  expect(login.body.success).toBe(true);
+  expect(login.body.data.accessToken).toMatch(/^ey/);
+  expect(login.body.data.refreshToken).toMatch(/^ey/);
+  expect(login.body.data.sessionId).toMatch(/^[0-9a-f-]{36}$/);
 
   const refreshed = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken: login.body.data.refreshToken }),
   });
-  assert.equal(refreshed.status, 200);
-  assert.equal(refreshed.body.success, true);
-  assert.match(refreshed.body.data.accessToken, /^ey/);
-  assert.match(refreshed.body.data.refreshToken, /^ey/);
-  assert.notEqual(refreshed.body.data.refreshToken, login.body.data.refreshToken);
+  expect(refreshed.status).toBe(200);
+  expect(refreshed.body.success).toBe(true);
+  expect(refreshed.body.data.accessToken).toMatch(/^ey/);
+  expect(refreshed.body.data.refreshToken).toMatch(/^ey/);
+  expect(refreshed.body.data.refreshToken).not.toBe(login.body.data.refreshToken);
 
   const replay = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken: login.body.data.refreshToken }),
   });
-  assert.equal(replay.status, 401);
-  assert.equal(replay.body.error.code, 'UNAUTHORIZED');
+  expect(replay.status).toBe(401);
+  expect(replay.body.error.code).toBe('UNAUTHORIZED');
 
   const refreshedAgain = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken: refreshed.body.data.refreshToken }),
   });
-  assert.equal(refreshedAgain.status, 200);
-  assert.notEqual(
-    refreshedAgain.body.data.refreshToken,
+  expect(refreshedAgain.status).toBe(200);
+  expect(refreshedAgain.body.data.refreshToken).not.toBe(
     refreshed.body.data.refreshToken,
   );
-
   const logout = await request('/api/v1/auth/logout', {
     method: 'POST',
     headers: {
@@ -122,15 +119,14 @@ test('logs in, creates a persistent session, and logs out', async () => {
     },
     body: JSON.stringify({ sessionId: login.body.data.sessionId }),
   });
-  assert.equal(logout.status, 200);
-  assert.equal(logout.body.success, true);
-
+  expect(logout.status).toBe(200);
+  expect(logout.body.success).toBe(true);
   const afterLogout = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken: refreshedAgain.body.data.refreshToken }),
   });
-  assert.equal(afterLogout.status, 401);
+  expect(afterLogout.status).toBe(401);
 });
 
 test('rejects invalid credentials and malformed requests', async () => {
@@ -149,30 +145,30 @@ test('rejects invalid credentials and malformed requests', async () => {
       },
     }),
   });
-  assert.equal(invalidLogin.status, 401);
-  assert.equal(invalidLogin.body.error.code, 'UNAUTHORIZED');
+  expect(invalidLogin.status).toBe(401);
+  expect(invalidLogin.body.error.code).toBe('UNAUTHORIZED');
 
   const invalidRefresh = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ refreshToken: 'not-a-jwt' }),
   });
-  assert.equal(invalidRefresh.status, 401);
-  assert.equal(invalidRefresh.body.error.code, 'UNAUTHORIZED');
+  expect(invalidRefresh.status).toBe(401);
+  expect(invalidRefresh.body.error.code).toBe('UNAUTHORIZED');
 
   const malformedRefresh = await request('/api/v1/auth/refresh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({}),
   });
-  assert.equal(malformedRefresh.status, 422);
-  assert.equal(malformedRefresh.body.error.code, 'VALIDATION_ERROR');
+  expect(malformedRefresh.status).toBe(422);
+  expect(malformedRefresh.body.error.code).toBe('VALIDATION_ERROR');
 
   const malformed = await request('/api/v1/auth/register', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ email: 'not-an-email', password: 'short' }),
   });
-  assert.equal(malformed.status, 422);
-  assert.equal(malformed.body.error.code, 'VALIDATION_ERROR');
+  expect(malformed.status).toBe(422);
+  expect(malformed.body.error.code).toBe('VALIDATION_ERROR');
 });

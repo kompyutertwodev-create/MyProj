@@ -1,5 +1,4 @@
-﻿import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { expect, test } from 'vitest';
 import {
   CreateTenantHandler,
   GetTenantHandler,
@@ -48,16 +47,16 @@ test('Tenant.create() builds an active tenant with the owner as the first member
   const slug = TenantSlug.create('acme-corp').getOrThrow();
 
   const result = Tenant.create({ name, slug, ownerUserId: 'user-1' });
-  assert.equal(result.isOk(), true);
+  expect(result.isOk()).toBe(true);
 
   const tenant = result.value;
-  assert.equal(tenant.name.value, 'Acme Corp');
-  assert.equal(tenant.slug.value, 'acme-corp');
-  assert.equal(tenant.status, TenantStatus.Active);
-  assert.equal(tenant.ownerUserId, 'user-1');
-  assert.equal(tenant.members.length, 1);
-  assert.equal(tenant.members[0]?.role, MemberRole.Owner);
-  assert.equal(tenant.members[0]?.status, MemberStatus.Active);
+  expect(tenant.name.value).toBe('Acme Corp');
+  expect(tenant.slug.value).toBe('acme-corp');
+  expect(tenant.status).toBe(TenantStatus.Active);
+  expect(tenant.ownerUserId).toBe('user-1');
+  expect(tenant.members.length).toBe(1);
+  expect(tenant.members[0]?.role).toBe(MemberRole.Owner);
+  expect(tenant.members[0]?.status).toBe(MemberStatus.Active);
 });
 
 test('Tenant.create() emits TenantCreated and MemberAdded domain events', () => {
@@ -67,9 +66,9 @@ test('Tenant.create() emits TenantCreated and MemberAdded domain events', () => 
   const tenant = Tenant.create({ name, slug, ownerUserId: 'user-1' }).getOrThrow();
   const events = tenant.pullDomainEvents();
 
-  assert.equal(events.length, 2);
-  assert.equal(events[0]?.eventName, 'tenant.created');
-  assert.equal(events[1]?.eventName, 'tenant.member.added');
+  expect(events.length).toBe(2);
+  expect(events[0]?.eventName).toBe('tenant.created');
+  expect(events[1]?.eventName).toBe('tenant.member.added');
 });
 
 test('Tenant.addMember() rejects duplicate users', () => {
@@ -80,8 +79,8 @@ test('Tenant.addMember() rejects duplicate users', () => {
   }).getOrThrow();
 
   const duplicate = tenant.addMember(tenant.members[0]!);
-  assert.equal(duplicate.isErr(), true);
-  assert.equal(duplicate.error.code, 'MEMBER_ALREADY_EXISTS');
+  expect(duplicate.isErr()).toBe(true);
+  expect(duplicate.error.code).toBe('MEMBER_ALREADY_EXISTS');
 });
 
 test('Tenant.suspend() and activate() enforce lifecycle rules', () => {
@@ -91,14 +90,14 @@ test('Tenant.suspend() and activate() enforce lifecycle rules', () => {
     ownerUserId: 'owner-1',
   }).getOrThrow();
 
-  assert.equal(tenant.suspend('billing issue').isOk(), true);
-  assert.equal(tenant.status, TenantStatus.Suspended);
+  expect(tenant.suspend('billing issue').isOk()).toBe(true);
+  expect(tenant.status).toBe(TenantStatus.Suspended);
 
   // Suspending twice fails.
-  assert.equal(tenant.suspend('again').isErr(), true);
+  expect(tenant.suspend('again').isErr()).toBe(true);
 
-  assert.equal(tenant.activate().isOk(), true);
-  assert.equal(tenant.status, TenantStatus.Active);
+  expect(tenant.activate().isOk()).toBe(true);
+  expect(tenant.status).toBe(TenantStatus.Active);
 });
 
 test('Tenant.removeMember() protects the owner', () => {
@@ -110,8 +109,8 @@ test('Tenant.removeMember() protects the owner', () => {
 
   const owner = tenant.members[0]!;
   const result = tenant.removeMember(owner.id.value);
-  assert.equal(result.isErr(), true);
-  assert.equal(result.error.code, 'CANNOT_REMOVE_OWNER');
+  expect(result.isErr()).toBe(true);
+  expect(result.error.code).toBe('CANNOT_REMOVE_OWNER');
 });
 
 // ---------------------------------------------------------------------------
@@ -127,19 +126,19 @@ test('CreateTenantHandler persists a new tenant and its owner member', async () 
     ownerUserId: 'owner-42',
   });
 
-  assert.equal(result.isOk(), true);
+  expect(result.isOk()).toBe(true);
   const created = result.value;
-  assert.equal(created.slug, 'handler-corp');
-  assert.equal(created.ownerUserId, 'owner-42');
+  expect(created.slug).toBe('handler-corp');
+  expect(created.ownerUserId).toBe('owner-42');
 
   const persisted = await tenants.findById(created.tenantId);
-  assert.ok(persisted);
-  assert.equal(persisted.name.value, 'Handler Corp');
-  assert.equal(persisted.members.length, 1);
+  expect(persisted).toBeTruthy();
+  expect(persisted!.name.value).toBe('Handler Corp');
+  expect(persisted!.members.length).toBe(1);
 
   const memberList = await members.findByTenantId(created.tenantId);
-  assert.equal(memberList.length, 1);
-  assert.equal(memberList[0]?.userId, 'owner-42');
+  expect(memberList.length).toBe(1);
+  expect(memberList[0]?.userId).toBe('owner-42');
 });
 
 test('CreateTenantHandler rejects a duplicate slug', async () => {
@@ -150,15 +149,15 @@ test('CreateTenantHandler rejects a duplicate slug', async () => {
     slug: 'shared-slug',
     ownerUserId: 'owner-1',
   });
-  assert.equal(first.isOk(), true);
+  expect(first.isOk()).toBe(true);
 
   const second = await handler.execute({
     name: 'Second Corp',
     slug: 'shared-slug',
     ownerUserId: 'owner-2',
   });
-  assert.equal(second.isErr(), true);
-  assert.equal(second.error.code, 'CONFLICT');
+  expect(second.isErr()).toBe(true);
+  expect(second.error.code).toBe('CONFLICT');
 });
 
 test('CreateTenantHandler rejects invalid slug and empty owner', async () => {
@@ -169,16 +168,16 @@ test('CreateTenantHandler rejects invalid slug and empty owner', async () => {
     slug: 'A', // too short
     ownerUserId: 'owner-1',
   });
-  assert.equal(badSlug.isErr(), true);
-  assert.equal(badSlug.error.code, 'VALIDATION_ERROR');
+  expect(badSlug.isErr()).toBe(true);
+  expect(badSlug.error.code).toBe('VALIDATION_ERROR');
 
   const badOwner = await handler.execute({
     name: 'Bad Owner',
     slug: 'bad-owner',
     ownerUserId: '',
   });
-  assert.equal(badOwner.isErr(), true);
-  assert.equal(badOwner.error.code, 'VALIDATION_ERROR');
+  expect(badOwner.isErr()).toBe(true);
+  expect(badOwner.error.code).toBe('VALIDATION_ERROR');
 });
 
 test('CreateTenantHandler publishes domain events through the event bus', async () => {
@@ -190,10 +189,10 @@ test('CreateTenantHandler publishes domain events through the event bus', async 
     slug: 'events-corp',
     ownerUserId: 'owner-1',
   });
-  assert.equal(result.isOk(), true);
-  assert.equal(bus.published.length, 2);
-  assert.equal(bus.published[0]?.eventName, 'tenant.created');
-  assert.equal(bus.published[1]?.eventName, 'tenant.member.added');
+  expect(result.isOk()).toBe(true);
+  expect(bus.published.length).toBe(2);
+  expect(bus.published[0]?.eventName).toBe('tenant.created');
+  expect(bus.published[1]?.eventName).toBe('tenant.member.added');
 });
 
 // ---------------------------------------------------------------------------
@@ -204,7 +203,7 @@ test('GetTenantHandler returns null for an unknown tenant', async () => {
   const tenants = new InMemoryTenantRepository();
   const handler = new GetTenantHandler(tenants);
   const result = await handler.execute({ tenantId: 'does-not-exist' });
-  assert.equal(result, null);
+  expect(result).toBeNull();
 });
 
 test('ListTenantsHandler paginates results', async () => {
@@ -216,24 +215,24 @@ test('ListTenantsHandler paginates results', async () => {
       slug: `tenant-${index}`,
       ownerUserId: `owner-${index}`,
     });
-    assert.equal(result.isOk(), true);
+    expect(result.isOk()).toBe(true);
   }
 
   const list = new ListTenantsHandler(tenants);
   const page = await list.execute({ page: 1, pageSize: 2 });
-  assert.equal(page.items.length, 2);
-  assert.equal(page.total, 3);
-  assert.equal(page.hasNextPage, true);
-  assert.equal(page.hasPreviousPage, false);
+  expect(page.items.length).toBe(2);
+  expect(page.total).toBe(3);
+  expect(page.hasNextPage).toBe(true);
+  expect(page.hasPreviousPage).toBe(false);
 
   const second = await list.execute({ page: 2, pageSize: 2 });
-  assert.equal(second.items.length, 1);
-  assert.equal(second.hasNextPage, false);
-  assert.equal(second.hasPreviousPage, true);
+  expect(second.items.length).toBe(1);
+  expect(second.hasNextPage).toBe(false);
+  expect(second.hasPreviousPage).toBe(true);
 });
 
 test('ListMembersHandler returns members filtered by tenant', async () => {
-  const { tenants, members, handler: createHandler } = makeHandler();
+  const { members, handler: createHandler } = makeHandler();
 
   const first = await createHandler.execute({
     name: 'Members Corp',
@@ -245,7 +244,7 @@ test('ListMembersHandler returns members filtered by tenant', async () => {
     slug: 'other-corp',
     ownerUserId: 'owner-b',
   });
-  assert.equal(first.isOk() && second.isOk(), true);
+  expect(first.isOk() && second.isOk()).toBe(true);
 
   const list = new ListMembersHandler(members);
   const firstMembers = await list.execute({
@@ -253,14 +252,14 @@ test('ListMembersHandler returns members filtered by tenant', async () => {
     page: 1,
     pageSize: 20,
   });
-  assert.equal(firstMembers.length, 1);
-  assert.equal(firstMembers[0]?.userId, 'owner-a');
+  expect(firstMembers.length).toBe(1);
+  expect(firstMembers[0]?.userId).toBe('owner-a');
 
   const secondMembers = await list.execute({
     tenantId: second.value.tenantId,
     page: 1,
     pageSize: 20,
   });
-  assert.equal(secondMembers.length, 1);
-  assert.equal(secondMembers[0]?.userId, 'owner-b');
+  expect(secondMembers.length).toBe(1);
+  expect(secondMembers[0]?.userId).toBe('owner-b');
 });

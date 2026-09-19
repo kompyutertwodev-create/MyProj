@@ -1,5 +1,4 @@
-﻿import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { expect, test } from 'vitest';
 import {
   AuditEventType,
   AuditLog,
@@ -32,16 +31,16 @@ test('AuditLog.create() builds an immutable audit entry', () => {
     userAgent: 'node:test',
   });
 
-  assert.equal(result.isOk(), true);
+  expect(result.isOk()).toBe(true);
   const log = result.value;
-  assert.equal(log.eventType, AuditEventType.UserRegistered);
-  assert.equal(log.actorId.value, 'user-1');
-  assert.equal(log.tenantRef.value, null);
-  assert.equal(log.targetType, 'User');
-  assert.equal(log.targetId, 'user-1');
-  assert.equal(log.metadata.email, 'test@example.com');
-  assert.equal(log.ipAddress, '127.0.0.1');
-  assert.equal(log.userAgent, 'node:test');
+  expect(log.eventType).toBe(AuditEventType.UserRegistered);
+  expect(log.actorId.value).toBe('user-1');
+  expect(log.tenantRef.value).toBeNull();
+  expect(log.targetType).toBe('User');
+  expect(log.targetId).toBe('user-1');
+  expect(log.metadata.email).toBe('test@example.com');
+  expect(log.ipAddress).toBe('127.0.0.1');
+  expect(log.userAgent).toBe('node:test');
 });
 
 test('AuditLog.create() rejects empty actor id', () => {
@@ -51,8 +50,8 @@ test('AuditLog.create() rejects empty actor id', () => {
     targetType: 'User',
     targetId: 'user-1',
   });
-  assert.equal(result.isErr(), true);
-  assert.equal(result.error.code, 'ACTOR_ID_EMPTY');
+  expect(result.isErr()).toBe(true);
+  expect(result.error.code).toBe('ACTOR_ID_EMPTY');
 });
 
 test('AuditLog.create() rejects empty target type and id', () => {
@@ -62,8 +61,8 @@ test('AuditLog.create() rejects empty target type and id', () => {
     targetType: '',
     targetId: 'user-1',
   });
-  assert.equal(badTarget.isErr(), true);
-  assert.equal(badTarget.error.code, 'AUDIT_TARGET_TYPE_EMPTY');
+  expect(badTarget.isErr()).toBe(true);
+  expect(badTarget.error.code).toBe('AUDIT_TARGET_TYPE_EMPTY');
 
   const badId = AuditLog.create({
     eventType: AuditEventType.UserRegistered,
@@ -71,8 +70,8 @@ test('AuditLog.create() rejects empty target type and id', () => {
     targetType: 'User',
     targetId: '',
   });
-  assert.equal(badId.isErr(), true);
-  assert.equal(badId.error.code, 'AUDIT_TARGET_ID_EMPTY');
+  expect(badId.isErr()).toBe(true);
+  expect(badId.error.code).toBe('AUDIT_TARGET_ID_EMPTY');
 });
 
 test('AuditLog.create() preserves tenant reference when provided', () => {
@@ -83,8 +82,8 @@ test('AuditLog.create() preserves tenant reference when provided', () => {
     targetType: 'Tenant',
     targetId: 'tenant-42',
   });
-  assert.equal(result.isOk(), true);
-  assert.equal(result.value.tenantRef.value, 'tenant-42');
+  expect(result.isOk()).toBe(true);
+  expect(result.value.tenantRef.value).toBe('tenant-42');
 });
 
 // ---------------------------------------------------------------------------
@@ -102,11 +101,11 @@ test('RecordAuditHandler persists an audit log', async () => {
     metadata: { email: 'test@example.com' },
   });
 
-  assert.equal(result.isOk(), true);
+  expect(result.isOk()).toBe(true);
   const saved = await repository.findById(result.value.auditLogId);
-  assert.ok(saved);
-  assert.equal(saved.eventType, AuditEventType.UserRegistered);
-  assert.equal(saved.actorId.value, 'user-1');
+  expect(saved).toBeTruthy();
+  expect(saved!.eventType).toBe(AuditEventType.UserRegistered);
+  expect(saved!.actorId.value).toBe('user-1');
 });
 
 test('RecordAuditHandler returns validation error for empty actor id', async () => {
@@ -119,8 +118,8 @@ test('RecordAuditHandler returns validation error for empty actor id', async () 
     targetId: 'user-1',
   });
 
-  assert.equal(result.isErr(), true);
-  assert.equal(result.error.code, 'VALIDATION_ERROR');
+  expect(result.isErr()).toBe(true);
+  expect(result.error.code).toBe('VALIDATION_ERROR');
 });
 
 // ---------------------------------------------------------------------------
@@ -141,19 +140,19 @@ test('ListAuditLogsHandler paginates results', async () => {
   }
 
   const page1 = await list.execute({ page: 1, pageSize: 2 });
-  assert.equal(page1.items.length, 2);
-  assert.equal(page1.total, 5);
-  assert.equal(page1.hasNextPage, true);
-  assert.equal(page1.hasPreviousPage, false);
+  expect(page1.items.length).toBe(2);
+  expect(page1.total).toBe(5);
+  expect(page1.hasNextPage).toBe(true);
+  expect(page1.hasPreviousPage).toBe(false);
 
   const page2 = await list.execute({ page: 2, pageSize: 2 });
-  assert.equal(page2.items.length, 2);
-  assert.equal(page2.hasNextPage, true);
-  assert.equal(page2.hasPreviousPage, true);
+  expect(page2.items.length).toBe(2);
+  expect(page2.hasNextPage).toBe(true);
+  expect(page2.hasPreviousPage).toBe(true);
 
   const page3 = await list.execute({ page: 3, pageSize: 2 });
-  assert.equal(page3.items.length, 1);
-  assert.equal(page3.hasNextPage, false);
+  expect(page3.items.length).toBe(1);
+  expect(page3.hasNextPage).toBe(false);
 });
 
 test('ListAuditLogsHandler filters by actorId', async () => {
@@ -174,8 +173,8 @@ test('ListAuditLogsHandler filters by actorId', async () => {
   });
 
   const filtered = await list.execute({ page: 1, pageSize: 10, actorId: 'actor-a' });
-  assert.equal(filtered.items.length, 1);
-  assert.equal(filtered.items[0]?.actorId, 'actor-a');
+  expect(filtered.items.length).toBe(1);
+  expect(filtered.items[0]?.actorId).toBe('actor-a');
 });
 
 test('ListAuditLogsHandler filters by eventType', async () => {
@@ -200,8 +199,8 @@ test('ListAuditLogsHandler filters by eventType', async () => {
     pageSize: 10,
     eventType: AuditEventType.TenantCreated,
   });
-  assert.equal(filtered.items.length, 1);
-  assert.equal(filtered.items[0]?.eventType, AuditEventType.TenantCreated);
+  expect(filtered.items.length).toBe(1);
+  expect(filtered.items[0]?.eventType).toBe(AuditEventType.TenantCreated);
 });
 
 // ---------------------------------------------------------------------------
@@ -232,10 +231,10 @@ test('AuditEventSubscriber records iam.UserRegistered events', async () => {
   );
 
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 1);
-  assert.equal(all[0]?.eventType, AuditEventType.UserRegistered);
-  assert.equal(all[0]?.actorId.value, 'user-42');
-  assert.equal(all[0]?.metadata['email'], 'new@example.com');
+  expect(all.length).toBe(1);
+  expect(all[0]?.eventType).toBe(AuditEventType.UserRegistered);
+  expect(all[0]?.actorId.value).toBe('user-42');
+  expect(all[0]?.metadata['email']).toBe('new@example.com');
 });
 
 test('AuditEventSubscriber records tenant.created events with tenant scope', async () => {
@@ -251,10 +250,10 @@ test('AuditEventSubscriber records tenant.created events with tenant scope', asy
   );
 
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 1);
-  assert.equal(all[0]?.eventType, AuditEventType.TenantCreated);
-  assert.equal(all[0]?.actorId.value, 'owner-1');
-  assert.equal(all[0]?.metadata['slug'], 'acme-corp');
+  expect(all.length).toBe(1);
+  expect(all[0]?.eventType).toBe(AuditEventType.TenantCreated);
+  expect(all[0]?.actorId.value).toBe('owner-1');
+  expect(all[0]?.metadata['slug']).toBe('acme-corp');
 });
 
 test('AuditEventSubscriber ignores unknown events', async () => {
@@ -264,5 +263,5 @@ test('AuditEventSubscriber ignores unknown events', async () => {
   await subscriber.handle(makeEvent('unknown.Event', { foo: 'bar' }));
 
   const all = await repository.findAll({}, { limit: 10, offset: 0 });
-  assert.equal(all.length, 0);
+  expect(all.length).toBe(0);
 });
