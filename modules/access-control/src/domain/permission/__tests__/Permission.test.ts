@@ -3,74 +3,82 @@ import { Permission } from '../Permission.js';
 
 describe('Permission', () => {
   it('create() validates format "resource:action"', () => {
-    const result = Permission.create('tenant:create', 'Create tenant');
+    const permission = Permission.create('tenant:create', 'Create tenant').getOrThrow();
 
-    expect(result.isOk()).toBe(true);
-    expect(result.value.name).toBe('tenant:create');
-    expect(result.value.description).toBe('Create tenant');
+    expect(permission.name).toBe('tenant:create');
+    expect(permission.description).toBe('Create tenant');
   });
 
   it('create() rejects empty name', () => {
     const result = Permission.create('', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_EMPTY');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_EMPTY');
+    }
   });
 
   it('create() rejects whitespace-only name', () => {
     const result = Permission.create('   ', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_EMPTY');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_EMPTY');
+    }
   });
 
   it('create() rejects invalid format (missing colon)', () => {
     const result = Permission.create('tenantcreate', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_INVALID');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_INVALID');
+    }
   });
 
   it('create() rejects invalid format (multiple colons)', () => {
     const result = Permission.create('tenant:create:action', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_INVALID');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_INVALID');
+    }
   });
 
   it('create() rejects invalid format (uppercase)', () => {
     const result = Permission.create('Tenant:Create', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_INVALID');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_INVALID');
+    }
   });
 
   it('create() rejects invalid format (special chars)', () => {
     const result = Permission.create('tenant@create', 'desc');
 
     expect(result.isErr()).toBe(true);
-    expect((result as any).error.code).toBe('PERMISSION_NAME_INVALID');
+    if (result.isErr()) {
+      expect(result.error.code).toBe('PERMISSION_NAME_INVALID');
+    }
   });
 
   it('create() accepts underscore separators', () => {
-    const result = Permission.create('tenant_settings:create', 'desc');
+    const permission = Permission.create('tenant_settings:create', 'desc').getOrThrow();
 
-    expect(result.isOk()).toBe(true);
-    expect(result.value.name).toBe('tenant_settings:create');
+    expect(permission.name).toBe('tenant_settings:create');
   });
 
   it('create() accepts empty description', () => {
-    const result = Permission.create('tenant:create', '');
+    const permission = Permission.create('tenant:create', '').getOrThrow();
 
-    expect(result.isOk()).toBe(true);
-    expect(result.value.description).toBe('');
+    expect(permission.description).toBe('');
   });
 
   it('create() accepts null description', () => {
-    const result = Permission.create('tenant:create', null as any);
+    const permission = Permission.create('tenant:create', null as any).getOrThrow();
 
-    expect(result.isOk()).toBe(true);
-    expect(result.value.description).toBe('');
+    expect(permission.description).toBe('');
   });
 
   it('toString() returns name', () => {
