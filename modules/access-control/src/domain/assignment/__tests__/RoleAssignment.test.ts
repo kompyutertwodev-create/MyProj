@@ -12,7 +12,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    const assignment = result.value;
+    const assignment = (result as any).value;
     expect(assignment.userId).toBe('user-123');
     expect(assignment.roleId).toBe('role-456');
     expect(assignment.roleName).toBe('admin');
@@ -28,10 +28,10 @@ describe('RoleAssignment', () => {
     const events = assignment.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role-assignment.assigned');
-    expect(events[0].userId).toBe('user-123');
-    expect(events[0].roleId).toBe('role-456');
-    expect(events[0].roleName).toBe('admin');
-    expect(events[0].assignedBy).toBe('user-789');
+    expect((events[0] as any).userId).toBe('user-123');
+    expect((events[0] as any).roleId).toBe('role-456');
+    expect((events[0] as any).roleName).toBe('admin');
+    expect((events[0] as any).assignedBy).toBe('user-789');
   });
 
   it('create() validates userId', () => {
@@ -43,7 +43,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_USER_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_USER_EMPTY');
   });
 
   it('create() validates roleId', () => {
@@ -55,7 +55,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_ROLE_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_ROLE_EMPTY');
   });
 
   it('create() validates roleName', () => {
@@ -67,7 +67,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_ROLE_NAME_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_ROLE_NAME_EMPTY');
   });
 
   it('create() normalizes roleName to lowercase', () => {
@@ -91,7 +91,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_ASSIGNED_BY_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_ASSIGNED_BY_EMPTY');
   });
 
   it('create() validates expiresAt is in future', () => {
@@ -105,7 +105,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_EXPIRES_IN_PAST');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_EXPIRES_IN_PAST');
   });
 
   it('create() accepts expiresAt in future', () => {
@@ -197,7 +197,7 @@ describe('RoleAssignment', () => {
     const result = assignment.revoke('user-999');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_ALREADY_REVOKED');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_ALREADY_REVOKED');
   });
 
   it('revoke() validates revokedBy', () => {
@@ -211,7 +211,7 @@ describe('RoleAssignment', () => {
     const result = assignment.revoke('');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_REVOKED_BY_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_REVOKED_BY_EMPTY');
   });
 
   it('revoke() validates reason length', () => {
@@ -225,7 +225,7 @@ describe('RoleAssignment', () => {
     const result = assignment.revoke('user-999', 'a'.repeat(501));
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_REASON_TOO_LONG');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_REASON_TOO_LONG');
   });
 
   it('revoke() accepts empty reason', () => {
@@ -310,7 +310,7 @@ describe('RoleAssignment', () => {
     const result = assignment.markExpired();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_REVOKED');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_REVOKED');
   });
 
   it('markExpired() rejects already expired', () => {
@@ -345,7 +345,7 @@ describe('RoleAssignment', () => {
     const result = pastAssignment.markExpired();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_ALREADY_EXPIRED');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_ALREADY_EXPIRED');
   });
 
   it('markExpired() rejects assignment without expiresAt', () => {
@@ -359,7 +359,7 @@ describe('RoleAssignment', () => {
     const result = assignment.markExpired();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_NEVER_EXPIRES');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_NEVER_EXPIRES');
   });
 
   it('markExpired() rejects assignment not yet expired', () => {
@@ -375,7 +375,7 @@ describe('RoleAssignment', () => {
     const result = assignment.markExpired();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_ASSIGNMENT_NOT_YET_EXPIRED');
+    expect((result as any).error.code).toBe('ROLE_ASSIGNMENT_NOT_YET_EXPIRED');
   });
 
   it('isExpiredAt() returns false when no expiresAt', () => {

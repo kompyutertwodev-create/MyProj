@@ -32,7 +32,7 @@ describe('Role', () => {
     const result = Role.create({ name, description: longDesc, permissions: [] });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_DESCRIPTION_TOO_LONG');
+    expect((result as any).error.code).toBe('ROLE_DESCRIPTION_TOO_LONG');
   });
 
   it('create() accepts permissions', () => {
@@ -128,7 +128,7 @@ describe('Role', () => {
     const result = role.rename(newName);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
+    expect((result as any).error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
   });
 
   it('rename() rejects unchanged name', () => {
@@ -138,7 +138,7 @@ describe('Role', () => {
     const result = role.rename(name);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_NAME_UNCHANGED');
+    expect((result as any).error.code).toBe('ROLE_NAME_UNCHANGED');
   });
 
   it('updateDescription() changes description and emits RoleUpdatedEvent', () => {
@@ -163,7 +163,7 @@ describe('Role', () => {
     const result = role.updateDescription('a'.repeat(501));
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_DESCRIPTION_TOO_LONG');
+    expect((result as any).error.code).toBe('ROLE_DESCRIPTION_TOO_LONG');
   });
 
   it('updateDescription() rejects unchanged description', () => {
@@ -173,7 +173,7 @@ describe('Role', () => {
     const result = role.updateDescription('Same');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_DESCRIPTION_UNCHANGED');
+    expect((result as any).error.code).toBe('ROLE_DESCRIPTION_UNCHANGED');
   });
 
   it('addPermission() adds permission and emits RolePermissionAddedEvent', () => {
@@ -202,7 +202,7 @@ describe('Role', () => {
     const result = role.addPermission(permission);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
+    expect((result as any).error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
   });
 
   it('addPermission() rejects duplicate permission', () => {
@@ -213,7 +213,7 @@ describe('Role', () => {
     const result = role.addPermission(permission);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_PERMISSION_DUPLICATE');
+    expect((result as any).error.code).toBe('ROLE_PERMISSION_DUPLICATE');
   });
 
   it('removePermission() removes permission and emits RolePermissionRemovedEvent', () => {
@@ -241,7 +241,7 @@ describe('Role', () => {
     const result = role.removePermission('tenant:create');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
+    expect((result as any).error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
   });
 
   it('removePermission() rejects missing permission', () => {
@@ -251,7 +251,7 @@ describe('Role', () => {
     const result = role.removePermission('tenant:create');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_PERMISSION_NOT_FOUND');
+    expect((result as any).error.code).toBe('ROLE_PERMISSION_NOT_FOUND');
   });
 
   it('replacePermissions() replaces all permissions', () => {
@@ -285,7 +285,7 @@ describe('Role', () => {
     const result = role.replacePermissions([]);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
+    expect((result as any).error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
   });
 
   it('delete() emits RoleDeletedEvent', () => {
@@ -310,7 +310,7 @@ describe('Role', () => {
     const result = role.delete('user-123');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
+    expect((result as any).error.code).toBe('ROLE_SYSTEM_IMMUTABLE');
   });
 
   it('delete() rejects empty deletedBy', () => {
@@ -320,7 +320,7 @@ describe('Role', () => {
     const result = role.delete('');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_DELETED_BY_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_DELETED_BY_EMPTY');
   });
 
   it('hasPermission() returns true for granted permission', () => {
