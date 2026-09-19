@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CreateRoleHandler, type CreateRoleResult } from '../CreateRoleHandler.js';
 import type { CreateRoleCommand } from '../CreateRoleCommand.js';
-import type { AccessControlUnitOfWork } from '../../ports/AccessControlUnitOfWork.js';
-import type { RoleRepository } from '../../../domain/role/RoleRepository.js';
-import type { OutboxPort } from '../../ports/OutboxPort.js';
+import type { AccessControlUnitOfWork } from '../../../ports/AccessControlUnitOfWork.js';
+import type { RoleRepository } from '../../../../domain/role/RoleRepository.js';
+import type { OutboxPort } from '../../../ports/OutboxPort.js';
 
 describe('CreateRoleHandler', () => {
   it('creates a role successfully', async () => {

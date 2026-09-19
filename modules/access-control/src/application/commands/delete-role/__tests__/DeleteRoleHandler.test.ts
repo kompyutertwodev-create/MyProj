@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { ok } from '@workspace/kernel';
 import { DeleteRoleHandler, type DeleteRoleResult } from '../DeleteRoleHandler.js';
 import type { DeleteRoleCommand } from '../DeleteRoleCommand.js';
-import type { AccessControlUnitOfWork } from '../../ports/AccessControlUnitOfWork.js';
-import type { RoleRepository } from '../../../domain/role/RoleRepository.js';
-import type { OutboxPort } from '../../ports/OutboxPort.js';
+import type { AccessControlUnitOfWork } from '../../../ports/AccessControlUnitOfWork.js';
+import type { RoleRepository } from '../../../../domain/role/RoleRepository.js';
+import type { OutboxPort } from '../../../ports/OutboxPort.js';
 
 describe('DeleteRoleHandler', () => {
   it('deletes role successfully', async () => {

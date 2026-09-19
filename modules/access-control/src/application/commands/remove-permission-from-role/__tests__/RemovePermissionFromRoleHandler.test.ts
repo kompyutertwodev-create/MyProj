@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { ok } from '@workspace/kernel';
 import { RemovePermissionFromRoleHandler, type RemovePermissionFromRoleResult } from '../RemovePermissionFromRoleHandler.js';
 import type { RemovePermissionFromRoleCommand } from '../RemovePermissionFromRoleCommand.js';
-import type { AccessControlUnitOfWork } from '../../ports/AccessControlUnitOfWork.js';
-import type { RoleRepository } from '../../../domain/role/RoleRepository.js';
-import type { OutboxPort } from '../../ports/OutboxPort.js';
+import type { AccessControlUnitOfWork } from '../../../ports/AccessControlUnitOfWork.js';
+import type { RoleRepository } from '../../../../domain/role/RoleRepository.js';
+import type { OutboxPort } from '../../../ports/OutboxPort.js';
 
 describe('RemovePermissionFromRoleHandler', () => {
   it('removes permission from role successfully', async () => {
