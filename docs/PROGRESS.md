@@ -250,6 +250,16 @@ Bu fayl **xronologik** tartibda **barcha** bajarilgan ishlarni saqlaydi.
 
 ---
 
+## 2026-09-19 (10-qism) — `access-control` application testlari (boshlangan)
+
+**Holat:** 🟡 Boshlangan
+**Fayllar:** 1 ta test fayl
+**Testlar:** 10/174 (application)
+**Xususiyatlar:**
+- **CreateRoleHandler** — 10 ta test (create, validations, normalizations)
+
+---
+
 ## Umumiy statistika (2026-09-19)
 
 | Ko'rsatkich | Qiymat |
