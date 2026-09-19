@@ -39,6 +39,8 @@ export default defineConfig({
       '.git',
       'coverage',
       '**/node_modules/**',
+      'apps/api/tests/**',
+      'packages/ui/src/components/**',
     ],
   },
   resolve: {
