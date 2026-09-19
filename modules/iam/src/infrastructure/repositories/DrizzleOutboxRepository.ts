@@ -1,6 +1,10 @@
 import { and, eq, lte, or, sql } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import type { DomainEvent } from '@workspace/kernel';
+import type { DomainEvent, EventContext } from '@workspace/kernel';
+import {
+  EMPTY_EVENT_CONTEXT,
+  metadataFromContext,
+} from '@workspace/kernel';
 import type { OutboxMessage, OutboxStore } from '@workspace/platform';
 import { outboxEvents } from '../database/schema/outbox-events.table.js';
 
@@ -18,7 +22,11 @@ export class DrizzleOutboxRepository implements OutboxStore {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private readonly db: NodePgDatabase<any>) {}
 
-  async enqueue(event: DomainEvent): Promise<void> {
+  async enqueue(
+    event: DomainEvent,
+    context: EventContext = EMPTY_EVENT_CONTEXT,
+  ): Promise<void> {
+    const metadata = metadataFromContext(context);
     await this.db
       .insert(outboxEvents)
       .values({
@@ -30,12 +38,22 @@ export class DrizzleOutboxRepository implements OutboxStore {
         occurredAt: event.occurredAt,
         createdAt: new Date(),
         availableAt: new Date(),
+        tenantId: metadata.tenantId ?? null,
+        correlationId: metadata.correlationId ?? null,
+        causationId: metadata.causationId ?? null,
+        actorId: metadata.actorId ?? null,
+        schemaVersion: metadata.schemaVersion ?? 1,
+        aggregateVersion: metadata.aggregateVersion ?? 0,
+        metadata: metadata.extras ?? {},
       })
       .onConflictDoNothing();
   }
 
-  async enqueueAll(events: DomainEvent[]): Promise<void> {
-    for (const event of events) await this.enqueue(event);
+  async enqueueAll(
+    events: ReadonlyArray<DomainEvent>,
+    context: EventContext = EMPTY_EVENT_CONTEXT,
+  ): Promise<void> {
+    for (const event of events) await this.enqueue(event, context);
   }
 
   async claimBatch(workerId: string, limit: number, leaseMs: number): Promise<OutboxMessage[]> {
@@ -56,6 +74,7 @@ export class DrizzleOutboxRepository implements OutboxStore {
 
       if (candidates.length === 0) return [] as ClaimedRow[];
       const ids = candidates.map((candidate) => candidate.id);
+      const placeholders = ids.map((id) => sql`${id}`);
       return tx
         .update(outboxEvents)
         .set({
@@ -64,12 +83,7 @@ export class DrizzleOutboxRepository implements OutboxStore {
           lockedAt: new Date(),
           lockToken: workerId,
         })
-        .where(
-          sql`${outboxEvents.id} IN (${sql.join(
-            ids.map((id) => sql`${id}`),
-            sql`, `
-          )})`
-        )
+        .where(sql`${outboxEvents.id} IN (${sql.join(placeholders, sql`, `)})`)
         .returning({
           id: outboxEvents.id,
           eventName: outboxEvents.eventName,

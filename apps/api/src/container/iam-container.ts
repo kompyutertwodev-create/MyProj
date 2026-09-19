@@ -34,6 +34,8 @@ import {
   type PostgresDatabase,
   runSqlMigrations,
 } from '@workspace/platform';
+import { withAmbientContext } from '@workspace/kernel';
+import { getEventContext } from '../context/index.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -99,7 +101,10 @@ export async function createIamContainer(options: IamContainerOptions): Promise<
 
   const outbox = new DrizzleOutboxRepository(db);
   const transport = createPlatformEventBus();
-  const events = new OutboxEventBus(outbox, transport);
+  const events = withAmbientContext(
+    new OutboxEventBus(outbox, transport),
+    getEventContext,
+  );
   const outboxDispatcher = new OutboxEventDispatcher(outbox, transport);
   if (options.startBackgroundWorkers !== false) {
     outboxDispatcher.start();

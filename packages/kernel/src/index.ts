@@ -12,6 +12,11 @@ export {
   mergeContext,
   metadataFromContext,
 } from './domain/EventContext.js';
+export {
+  withAmbientContext,
+  type AmbientContextProvider,
+  type ContextAwareTarget,
+} from './utils/withAmbientContext.js';
 export { UniqueId } from './domain/UniqueId.js';
 export { DomainError } from './domain/DomainError.js';
 export { CompositeSpecification } from './domain/Specification.js';

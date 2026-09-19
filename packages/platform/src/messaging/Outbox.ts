@@ -1,4 +1,4 @@
-import type { DomainEvent } from '@workspace/kernel';
+import type { DomainEvent, EventContext } from '@workspace/kernel';
 import { randomUUID } from 'node:crypto';
 import type { EventBus } from './EventBus.js';
 import type { EventHandler } from './EventHandler.js';
@@ -9,9 +9,19 @@ export interface OutboxMessage {
   attempts: number;
 }
 
+/**
+ * Write-side persistence boundary for the transactional outbox.
+ *
+ * The optional `EventContext` carries correlation / causation / actor /
+ * tenant metadata. Stores that do not yet persist metadata may ignore it,
+ * which keeps the interface backward compatible with existing modules.
+ */
 export interface OutboxStore {
-  enqueue(event: DomainEvent): Promise<void>;
-  enqueueAll(events: DomainEvent[]): Promise<void>;
+  enqueue(event: DomainEvent, context?: EventContext): Promise<void>;
+  enqueueAll(
+    events: ReadonlyArray<DomainEvent>,
+    context?: EventContext,
+  ): Promise<void>;
   claimBatch(workerId: string, limit: number, leaseMs: number): Promise<OutboxMessage[]>;
   markPublished(id: string, workerId: string): Promise<void>;
   markFailed(id: string, workerId: string, error: string, retryAt: Date): Promise<void>;
@@ -27,12 +37,15 @@ export class OutboxEventBus implements EventBus {
     private readonly transport: EventBus
   ) {}
 
-  publish(event: DomainEvent): Promise<void> {
-    return this.store.enqueue(event);
+  publish(event: DomainEvent, context?: EventContext): Promise<void> {
+    return this.store.enqueue(event, context);
   }
 
-  async publishAll(events: DomainEvent[]): Promise<void> {
-    await this.store.enqueueAll(events);
+  async publishAll(
+    events: ReadonlyArray<DomainEvent>,
+    context?: EventContext,
+  ): Promise<void> {
+    await this.store.enqueueAll(events, context);
   }
 
   subscribe<T extends DomainEvent>(eventName: string, handler: EventHandler<T>): () => void {
