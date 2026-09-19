@@ -3,6 +3,8 @@ import { Policy } from '../Policy.js';
 import { PolicyId } from '../PolicyId.js';
 import { PolicyEffect } from '../PolicyEffect.js';
 import type { AttributeCondition } from '../AttributeCondition.js';
+import { PolicyDeletedEvent } from '../events/PolicyDeletedEvent.js';
+import { PolicyCreatedEvent } from '../events/PolicyCreatedEvent.js';
 
 describe('Policy', () => {
   it('create() builds an active policy with PolicyCreatedEvent', () => {
@@ -17,7 +19,7 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    const policy = result.value;
+    const policy = result.getOrThrow();
     expect(policy.name).toBe('Admin Policy');
     expect(policy.description).toBe('Admin access');
     expect(policy.effect).toBe(PolicyEffect.Allow);
@@ -38,8 +40,9 @@ describe('Policy', () => {
     const events = policy.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.policy.created');
-    expect(events[0].name).toBe('Admin Policy');
-    expect(events[0].effect).toBe(PolicyEffect.Allow);
+    const createdEvent = events[0] as PolicyCreatedEvent;
+    expect(createdEvent.name).toBe('Admin Policy');
+    expect(createdEvent.effect).toBe(PolicyEffect.Allow);
   });
 
   it('create() validates name length', () => {
@@ -138,9 +141,10 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.subjects.length).toBe(2);
-    expect(result.value.resources.length).toBe(1);
-    expect(result.value.actions.length).toBe(2);
+    const policy = result.getOrThrow();
+    expect(policy.subjects.length).toBe(2);
+    expect(policy.resources.length).toBe(1);
+    expect(policy.actions.length).toBe(2);
   });
 
   it('create() accepts conditions', () => {
@@ -158,7 +162,8 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.conditions.length).toBe(1);
+    const policy = result.getOrThrow();
+    expect(policy.conditions.length).toBe(1);
   });
 
   it('create() accepts custom priority', () => {
@@ -173,7 +178,8 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.priority).toBe(500);
+    const policy = result.getOrThrow();
+    expect(policy.priority).toBe(500);
   });
 
   it('create() accepts inactive', () => {
@@ -188,7 +194,8 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.isActive).toBe(false);
+    const policy = result.getOrThrow();
+    expect(policy.isActive).toBe(false);
   });
 
   it('create() accepts tenantId', () => {
@@ -203,7 +210,8 @@ describe('Policy', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.tenantId).toBe('tenant-123');
+    const policy = result.getOrThrow();
+    expect(policy.tenantId).toBe('tenant-123');
   });
 
   it('reconstruct() rebuilds from persistence', () => {
@@ -535,7 +543,8 @@ describe('Policy', () => {
     const events = policy.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.policy.deleted');
-    expect(events[0].deletedBy).toBe('user-456');
+    const deletedEvent = events[0] as PolicyDeletedEvent;
+    expect(deletedEvent.deletedBy).toBe('user-456');
   });
 
   it('delete() rejects already deleted', () => {
