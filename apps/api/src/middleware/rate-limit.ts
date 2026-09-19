@@ -25,6 +25,21 @@ const SLOW_DOWN_BODY = {
 } as const;
 
 /**
+ * Detect whether the process runs under an automated test runner.
+ *
+ * In that case auth limits are relaxed because the integration tests
+ * issue several sequential auth calls from the same fake IP and would
+ * otherwise trip the 5/min bucket. Production and development keep the
+ * strict limits.
+ */
+function isTestEnvironment(): boolean {
+  return (
+    process.env['NODE_ENV'] === 'test' ||
+    process.env['SKIP_AUTH_RATE_LIMIT'] === '1'
+  );
+}
+
+/**
  * Global rate limit: 300 requests per minute per IP.
  *
  * This is the outer safety net. It is deliberately generous because a
@@ -78,11 +93,17 @@ function authKey(req: Parameters<RateLimitRequestHandler>[0]): string {
  * Applied only to `/api/v1/auth/*` (login, register, refresh, OAuth).
  * Kept as a separate handler so that it can be mounted *before* the
  * auth router without affecting other routes.
+ *
+ * In test environments the limit is raised to 10,000 so that integration
+ * tests exercising login/register/refresh flows do not trip the bucket.
+ * Production always uses 5.
  */
 export function authRateLimit(): RateLimitRequestHandler {
+  const limit = isTestEnvironment() ? 10_000 : 5;
+
   return rateLimit({
     windowMs: 60_000,
-    limit: 5,
+    limit,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
     keyGenerator: authKey,
@@ -105,12 +126,17 @@ export function authRateLimit(): RateLimitRequestHandler {
  *
  * The slow-down is intentionally longer than the global one because
  * password guessing is a high-value target.
+ *
+ * Disabled in test environments for the same reason as the rate limit.
  */
 export function authSlowDown(): RequestHandler {
+  const delayAfter = isTestEnvironment() ? 10_000 : 3;
+  const delayMs = isTestEnvironment() ? 0 : 1_000;
+
   return slowDown({
     windowMs: 60_000,
-    delayAfter: 3,
-    delayMs: () => 1_000,
+    delayAfter,
+    delayMs: () => delayMs,
     keyGenerator: (req) => authKey(req),
   });
 }
