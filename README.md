@@ -1,100 +1,101 @@
-# IdentityPlatform
+# Identity Platform
 
-An enterprise DDD monorepo for identity, tenant, billing, notification, and
-audit management, built API-first with a strict composition-root / module
-separation.
+Enterprise-grade SaaS platform built as a pnpm monorepo with Domain-Driven Design and Clean Architecture.
 
-## Run & Operate
+## Status
 
-- `pnpm --filter @workspace/api run dev` — run the API composition root
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- Required env: none yet configured (DB/Redis/etc. wiring is deferred until
-  `packages/platform`'s database/cache capabilities are built out)
+| Modul | Holat | Tavsif |
+|---|---|---|
+| `@workspace/kernel` | ✅ | DDD asoslari (AggregateRoot, Result, ValueObject, DomainError) |
+| `@workspace/platform` | ✅ | Logger, PostgreSQL, email, messaging, cache, migrations |
+| `@workspace/contracts` | ✅ | Umumiy tiplar va interfeyslar |
+| `@workspace/iam` | ✅ | Autentifikatsiya, RBAC, ABAC, OAuth (Google/GitHub/Telegram) |
+| `@workspace/tenant` | ✅ | Multi-tenancy, membership, tenant settings |
+| `@workspace/audit` | ✅ | Event-driven audit log |
+| `@workspace/notification` | ✅ | Email (SendGrid/SES), Telegram (enterprise), event dispatcher |
+| `@workspace/access-control` | 🟡 | Skelet |
+| `@workspace/billing` | 🟡 | Skelet |
+| `@workspace/subscription` | 🟡 | Skelet |
+| Boshqa 9 modul | 🟡 | Skelet |
 
-## Stack
+| Ilova | Holat |
+|---|---|
+| `apps/api` | ✅ (iam + tenant + audit + notification) |
+| `apps/web` | 🟡 Skelet |
+| `apps/admin` | 🟡 Skelet |
+| `apps/mobile` | 🟡 Skelet |
+| `apps/telegram` | 🟡 Skelet |
 
-- pnpm workspaces, Node.js 22+, TypeScript 5.9
-- API: Express 5, pino logging, zod validation
-- Frontend: Next.js (`web`, `admin`), TanStack Query/Router/Form/Table/Virtual,
-  Zustand, Tailwind CSS, shadcn/ui-style components, Lucide icons
-- Mobile: Expo (SDK 53) / React Native
-- DB (planned): PostgreSQL + Drizzle ORM
-- Build: esbuild (ESM bundle) for `apps/api`
+**Testlar:** 58/58 ✅ | **Typecheck:** 39/39 ✅
 
-## Where things live
+## Texnologiyalar
 
-- `apps/` — composition roots only, no business logic: `api` (Express HTTP
-  layer — **the only thing clients call**), `web`, `admin` (Next.js), `telegram`
-  (bot), `mobile` (Expo)
-- `modules/` — business logic, one per bounded context, hexagonal layout
-  (domain / application / infrastructure / presentation): `iam`, `billing`,
-  `subscription`, `tenant`, `notification`, `audit`, `catalog`, `content`,
-  `viewing`, `media`, `search`, `analytics`, `access-control`, `features`,
-  `devices`, `integrations`, `advertising`, `social`, `admin`, `reports`.
-  `iam` is **Identity-First**: the first module built, not a shared
-  dependency — other modules only ever hold a `userId: string`, never import
-  IAM's domain types. Modules never import each other directly (not even via
-  `contracts`) — only Event/Command/Query. See `docs/architecture.md` §3, §9.
-- `packages/` — technical capabilities: `kernel` (DDD building blocks, zero
-  deps), `contracts` (DTOs only, depends only on kernel), `platform`
-  (backend: logger, config, database, cache, messaging, storage, security,
-  observability, validation, errors, scheduler, locking, server),
-  `platform/client` (`@workspace/platform-client` — frontend capabilities:
-  http, query, router, forms, table, virtual, storage, state, theme,
-  browser, auth, notifications, analytics, cookies, hooks), `ui` (UI
-  components only — no hooks/constants/utils beyond `cn`/`composeRefs`/`slot`),
-  `tooling` (eslint/prettier/tsconfig/test-utils/scripts)
-- `docs/architecture.md` — the frozen v1.0 architecture decision record
-  (dependency matrix, capability map, frontend TDR); read this before
-  restructuring any package
-- This is currently a **structure-only skeleton**: every package/module
-  matches the architecture as empty scaffold files. Real logic exists so far
-  only in `apps/api` (working Express composition root) and
-  `packages/platform`'s logger. Everything else is intentionally deferred.
-- The Replit artifact system was removed for this project — there is no
-  `artifacts/` directory; the project deploys directly as an application.
+- **Til:** TypeScript 5.9
+- **Package manager:** pnpm (workspace)
+- **Web:** Next.js 15, React 19, Tailwind 4
+- **API:** Express 5, Pino, Helmet
+- **Mobile:** Expo / React Native 0.79
+- **Telegram:** grammY
+- **DB:** PostgreSQL + Drizzle ORM (Supabase)
+- **Cache/Queue:** Redis, BullMQ
+- **Auth:** JWT (jose), Argon2id
+- **Test:** `node:test`, Playwright
+- **CI/CD:** GitHub Actions, Docker, Kubernetes
 
-## Architecture decisions
+## Tez boshlash
 
-- See `docs/architecture.md` for the full frozen v1.0 record. Key points:
-  Identity-First (not Identity-Centric), no `apps/api`-bypassing client
-  calls, no `utils/shared/common` catch-alls anywhere, `platform/client` is
-  a separate workspace package so frontend bundles never pull in backend
-  native deps.
+```bash
+# O'rnatish
+pnpm install
 
-## Product
+# Typecheck (39/39 workspace)
+pnpm typecheck
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+# Testlar (58/58)
+cd apps/api && pnpm test
 
-## User preferences
+# Dev server
+cd apps/api && pnpm dev
+```
 
-- Uzbek-speaking; explains architecture in Uzbek. Wants the architecture
-  docs' decisions followed exactly, no deviation without an explicit
-  architecture-review decision.
-- `apps/api` is the sole HTTP entrypoint — never add routes anywhere else.
+## Muhit o'zgaruvchilari
 
-## Gotchas
+`apps/api/.env`:
 
-- There is no running workflow/preview right now (artifact was removed).
-  Set up a workflow for `apps/api` (and `web`/`admin` if needed) before
-  expecting anything to be visible in the preview pane.
-- `packages/platform` (backend) and `packages/platform/client` (frontend)
-  are two separate workspace packages, both physically nested under
-  `packages/platform/` — don't confuse the folder nesting for a single
-  package.
+```
+DATABASE_URL="postgresql://user:password@host:6543/postgres"
+JWT_SECRET="<64-belgi-random>"
+PORT=3000
+NODE_ENV=development
+```
 
-## Pointers
+Ixtiyoriy (notification uchun):
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup,
-  and package details.
-- See `docs/architecture.md` before adding a package, moving a capability,
-  or introducing a new top-level folder.
+```
+SENDGRID_API_KEY=...
+EMAIL_FROM=noreply@example.com
+TELEGRAM_BOT_TOKEN=...
+```
 
-## Git Workflow Test
+## Arxitektura
 
-This change was created on the main development computer.
+Har bir modul **DDD + Clean Architecture** bo'yicha 4 qatlamdan iborat:
 
-## Second Computer Test
+```
+Presentation → Application → Domain
+                    ↑
+              Infrastructure
+```
 
-This change was created on the second development computer.
+Batafsil: [`docs/architecture.md`](./docs/architecture.md)
+
+## Hujjatlar
+
+- [Arxitektura](./docs/architecture.md)
+- [Bajarilgan ishlar](./docs/PROGRESS.md)
+- [Kod uslubi](./docs/CONVENTIONS.md)
+- [Yangi oyna uchun handoff](./docs/HANDOFF.md)
+
+## Litsenziya
+
+Private — barcha huquqlar himoyalangan.
