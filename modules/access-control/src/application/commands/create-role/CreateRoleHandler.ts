@@ -58,7 +58,7 @@ export class CreateRoleHandler {
 
     const permissionNames = normalizePermissionNames(command.permissionNames);
 
-    // 2. Uniqueness check вЂ” keep it inside the UoW so it shares the txn.
+    // 2. Uniqueness check Р Р†Р вЂљРІР‚Сњ keep it inside the UoW so it shares the txn.
     const duplicate = await this.uow.roles.existsByName(name.value);
     if (duplicate) {
       return err(

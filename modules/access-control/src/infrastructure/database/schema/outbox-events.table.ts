@@ -19,6 +19,15 @@ import {
  * The event payload is JSONB: the dispatcher does not need to know the
  * concrete event class, only its `eventName` and `aggregateId`, both
  * duplicated into dedicated columns for indexing.
+ *
+ * Metadata columns mirror EventMetadata so the dispatcher can publish
+ * envelopes without decoding the payload:
+ *   - correlation_id / causation_id в†’ tracing chains
+ *   - actor_id                       в†’ audit
+ *   - tenant_id                      в†’ multi-tenancy filtering
+ *   - schema_version                 в†’ payload evolution
+ *   - metadata                       в†’ free-form `extras`
+ *   - aggregate_version              в†’ optimistic concurrency / replay
  */
 export const acOutboxEvents = pgTable(
   'ac_outbox_events',
@@ -36,6 +45,17 @@ export const acOutboxEvents = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+
+    // в”Ђв”Ђ Event metadata в”Ђв”Ђ
+    correlationId: uuid('correlation_id'),
+    causationId: uuid('causation_id'),
+    actorId: uuid('actor_id'),
+    schemaVersion: integer('schema_version').notNull().default(1),
+    metadata: jsonb('metadata')
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    aggregateVersion: integer('aggregate_version').notNull().default(0),
   },
   (table) => ({
     unpublishedIdx: index('ac_outbox_events_unpublished_idx').on(
@@ -46,6 +66,9 @@ export const acOutboxEvents = pgTable(
       table.aggregateId,
     ),
     nameIdx: index('ac_outbox_events_name_idx').on(table.eventName),
+    correlationIdx: index('ac_outbox_events_correlation_idx').on(
+      table.correlationId,
+    ),
   }),
 );
 

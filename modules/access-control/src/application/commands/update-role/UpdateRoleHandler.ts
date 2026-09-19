@@ -59,7 +59,7 @@ export class UpdateRoleHandler {
       );
     }
 
-    // 3. Apply changes вЂ” the aggregate enforces invariants.
+    // 3. Apply changes Р Р†Р вЂљРІР‚Сњ the aggregate enforces invariants.
     if (command.name !== undefined) {
       const nameResult = RoleName.create(command.name);
       if (nameResult.isErr()) {
