@@ -8,7 +8,7 @@ Uni **nusxa ko'chirib**, yangi oynaga **yopishtiring**.
 ## Prompt (yangi oynaga)
 
 ```markdown
-# Identity Platform — yangi oyna uchun to'liq kontekst
+# Identity Platform -- yangi oyna uchun to'liq kontekst
 
 ## Sizning rolingiz
 
@@ -19,12 +19,12 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 - **Har doim** kod **yozishdan oldin** tahlil qiling
 - **Har doim** PowerShell buyruqlarini **bittalab** bering
 - **Har doim** kod **yozgandan keyin** `pnpm typecheck` va `pnpm test` ishlatishni so'rang
-- **Xato** bo'lsa — **to'liq matnini** so'rang
+- **Xato** bo'lsa -- **to'liq matnini** so'rang
 - **BOM muammosi**: `package.json` va `.sql` uchun `[System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($false))`
 
 ## Loyiha haqida
 
-**Identity Platform** — enterprise-grade SaaS platforma uchun monorepo.
+**Identity Platform** -- enterprise-grade SaaS platforma uchun monorepo.
 **DDD + Clean Architecture + Hexagonal** tamoyillari asosida qurilgan.
 
 - **GitHub:** https://github.com/kompyutertwodev-create/MyProj
@@ -33,21 +33,29 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 - **Til:** TypeScript 5.9
 - **Monorepo:** pnpm workspace
 - **DB:** PostgreSQL (Supabase pooler)
-- **Test:** `node:test` (49/49 ✅)
+- **Test:** `node:test` (68/68 ✅)
 - **Typecheck:** 39/39 workspace ✅
 
 ## Hozirgi holat (2026-09-19)
 
 ### Tugallangan modullar ✅
 
-- `@workspace/kernel` — DDD + **EventMetadata, EventEnvelope, EventContext, sha256Hex**
-- `@workspace/platform` — Logger, PostgreSQL, email, messaging, cache, migrations
-- `@workspace/contracts` — Umumiy tiplar
-- `@workspace/iam` — **Auth + Users + OAuth** (RBAC olib tashlangan)
-- `@workspace/access-control` — **RBAC + ABAC** (to'liq DDD stack)
-- `@workspace/tenant` — Multi-tenancy
-- `@workspace/audit` — Event-driven audit log
-- `@workspace/notification` — Email + Telegram (enterprise)
+- `@workspace/kernel` -- DDD + EventMetadata, EventEnvelope, EventContext, sha256Hex
+- `@workspace/platform` -- Logger, PostgreSQL, email, messaging, cache, migrations
+- `@workspace/contracts` -- Umumiy tiplar
+- `@workspace/iam` -- Auth + Users + OAuth (RBAC olib tashlangan)
+- `@workspace/access-control` -- RBAC + ABAC (to'liq DDD stack)
+- `@workspace/tenant` -- Multi-tenancy
+- `@workspace/audit` -- Event-driven audit log
+- `@workspace/notification` -- Email + Telegram (enterprise)
+
+### `apps/api` -- Phase-0 **tugallandi** ✅
+
+- `context/` -- RequestContext + AsyncLocalStorage
+- `middleware/` -- request-id, request-context, security, rate-limit
+- `container/outbox-context.ts` -- withAmbientContext adapter
+- `server.ts` -- applyAuthMiddleware mount
+- **68/68 test**, typecheck ✅
 
 ### Skelet 🟡
 - `billing`, `subscription`, `catalog`, `media`, `search`, `analytics`, `reports`, `advertising`, `integrations`, `social`, `devices`, `features`, `admin`, `viewing`
@@ -58,39 +66,41 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 
 ### Oxirgi commitlar
 ```
-db3128d feat(iam): add AuthorizationPort for cross-module RBAC
-00f1f24 refactor(iam): extract RBAC to access-control, enterprise schema rewrite
-c78c9c5 feat(access-control): add event metadata envelope
-13a58f3 feat(access-control): add RBAC + ABAC module with full DDD stack
-93ce109 docs: add README, architecture, progress, conventions, and handoff
+cbceed2 docs: update PROGRESS and HANDOFF with Phase-0 completion
+6702818 feat(api): inject ambient correlationId into access-control outbox
+4a647c2 test(api): add middleware unit tests (request-id, request-context, security)
+94566a3 feat(api): wire auth rate limit and test env override
+a7a3ad6 chore(api): remove middleware.ts backup after Phase-0 refactor
+6bff6b9 test(access-control): add AssignRoleHandler unit tests
+e2aa769 feat(api): add Phase-0 middleware (request-id, request-context, security, rate-limit)
 ```
 
 ## Arxitektura tamoyillari
 
 ### DDD 4 qatlam
 ```
-Presentation → Application → Domain ← Infrastructure
+Presentation -> Application -> Domain <- Infrastructure
 ```
 
 ### Taqiqlangan
-- ❌ Controller → DB
-- ❌ Domain → tashqi kutubxona
-- ❌ Modul A → Modul B **to'g'ridan-to'g'ri import**
+- ❌ Controller -> DB
+- ❌ Domain -> tashqi kutubxona
+- ❌ Modul A -> Modul B **to'g'ridan-to'g'ri import**
 
 ### Ruxsat
 - ✅ Event orqali
-- ✅ Port orqali (`AuthorizationPort`, `ContactResolver`)
+- ✅ Port orqali (`AuthorizationPort`, `ContactResolver`, `OutboxPort`)
 
 ## Modul chegaralari
 
-**`iam`** va **`access-control`** — **bir-birini import qilmaydi**:
-- `iam` — **`AuthorizationPort`** (interface)
-- `access-control` — **`AccessControlAuthorizationAdapter`** (implement)
-- `apps/api` — **composition root** da wire qiladi
+**`iam`** va **`access-control`** -- **bir-birini import qilmaydi**:
+- `iam` -- **`AuthorizationPort`** (interface)
+- `access-control` -- **`AccessControlAuthorizationAdapter`** (implement)
+- `apps/api` -- **composition root** da wire qiladi
 
 ## Kod uslubi
 
-- **DDD qatlamlar:** domain → application → infrastructure → presentation
+- **DDD qatlamlar:** domain -> application -> infrastructure -> presentation
 - **Result pattern:** `Result<T, DomainError>` (domain), `Result<T, ApplicationError>` (application)
 - **Aggregate Root:** `create()` + `reconstruct()` + business methods
 - **Value Object:** `create()` + `getOrThrow()` + `equals()`
@@ -98,124 +108,94 @@ Presentation → Application → Domain ← Infrastructure
 - **Event name:** `<module>.<aggregate>.<action>` (masalan, `access-control.role.created`)
 - **Command/Handler:** har biri o'z papkasida + `index.ts`
 - **Repository:** interface (domain) + Drizzle/InMemory (infrastructure)
-- **Mapper:** `toDomain()` + `toPersistence()`
-- **Controller:** `create<Name>Router(deps)` factory
-- **Validator:** Zod schemas
 - **Import:** `.js` kengaytmasi **majburiy** (ESM)
-- **`super(id, version)`** — AggregateRoot'da `version` **majburiy**
+- **`super(id, version)`** -- AggregateRoot'da `version` **majburiy**
 
 Batafsil: `docs/CONVENTIONS.md`
 
-## Migration pattern (enterprise)
+## `apps/api` middleware
 
-- **UUID** primary keys
-- **TIMESTAMPTZ**
-- **Partial unique indexes** (`WHERE deleted_at IS NULL`)
-- **`version` column** (optimistic concurrency)
-- **`tenant_id` nullable** (multi-tenancy)
-- **CITEXT email** (case-insensitive)
-- **JSONB** + **GIN index**
-- **`updated_at` triggers**
-- **Idempotent** (`IF NOT EXISTS` / `OR REPLACE`)
+### Tartib (`applyMiddleware`)
+1. `trust proxy` -- `app.set('trust proxy', 1)`
+2. `requestId()` -- `req.id` + `X-Request-ID` header
+3. `pinoHttp` -- structured logging
+4. `requestContext()` -- AsyncLocalStorage
+5. `security()` -- helmet + CORS
+6. `compression()`
+7. `cookieParser()`
+8. `express.json()` + `express.urlencoded()`
+9. `globalSlowDown()`
+10. `globalRateLimit()`
 
-## Event metadata pattern
+### `applyAuthMiddleware` (routes'dan oldin)
+- `/api/v1/auth/*` uchun `authSlowDown()` + `authRateLimit()`
 
-**`@workspace/kernel`**:
-- `EventMetadata` — 8 field
-- `EventEnvelope<TEvent>` — `{ event, metadata }`
-- `EventContext` — request scoped
-- Helpers: `envelopeOf`, `mergeContext`, `metadataFromContext`, `EMPTY_EVENT_CONTEXT`
+### AsyncLocalStorage
+- `runWithRequestContext(ctx, fn)` -- o'rnatish
+- `getRequestContext()` -- to'liq context
+- `getEventContext()` -- faqat EventContext
+- `withEventContext(override)` -- merge
 
-**`access-control`**:
-- `OutboxPort` — `enqueue(event, context?)`, `enqueueAll(events, context?)`, `enqueueEnvelopes(envelopes)`
-- `DrizzleOutboxRepository` — metadata columns
-
-## `iam` hozirgi holati
-
-**Schema** (`0001_iam_v2_schema.sql`):
-- `identities` — UUID, CITEXT email, soft delete, tenant_id, version, MFA
-- `iam_sessions` — UUID, `refresh_token_hash`, revoked_at, version
-- `social_identities` — UUID, CITEXT provider_email
-- `iam_devices` — UUID, updated_at
-- `iam_oauth_states` — TIMESTAMPTZ
-- `iam_outbox_events` — platform `OutboxStore` pattern
-
-**Domain:** `User` (softDelete, tenantId, version), `Session` (`refreshTokenHash`)
-
-**Application:** `LoginUserHandler`, `OAuthLoginHandler`, `AuthService` — `authorization?: AuthorizationPort`
-
-**Olib tashlangan:** RBAC (Role, Permission, Policy, handlers, controllers, guards)
-
-## `access-control` hozirgi holati
-
-**Domain:**
-- `Role`, `Permission`, `Policy`, `RoleAssignment` (AggregateRoot'lar)
-- 13 ta domain event
-
-**Application:**
-- **12 commands**, **7 queries**, **PolicyEvaluator**
-- **`AccessControlAuthorizationAdapter`** — `AuthorizationPort` implement
-
-**Infrastructure:**
-- Drizzle schema (UUID, TIMESTAMPTZ, JSONB, GIN)
-- Drizzle + InMemory repos
-- `RbacSeeder` (idempotent)
-- Migration `0001_create_access_control.sql`, `0002_add_event_metadata.sql`
-
-**Presentation:** 19 endpoint under `/api/v1/access-control/*`
-
-## `apps/api` integratsiya
-
-```
-src/
-├── bootstrap.ts
-├── server.ts
-├── routes.ts
-├── middleware.ts
-├── errors.ts
-├── config.ts
-├── health.ts
-└── container/
-    ├── index.ts
-    ├── controllers.ts
-    ├── iam-container.ts
-    ├── access-control-container.ts
-    ├── tenant-container.ts
-    ├── audit-container.ts
-    ├── notification-container.ts
-    └── contact-resolver.ts
-```
-
-**Route'lar:** `/api/v1/{auth, identity, tenants, audit-logs, notifications, access-control}`
-
-**Composition root tartibi:**
-1. `access-control` (birinchi — authorization adapter uchun)
-2. `iam` (authorization bilan)
-3. `tenant`, `audit`, `notification`
-4. Re-mount `access-control` with real authGuard
+### `withAmbientContext(outbox)`
+- Outbox event'lariga `correlationId` avtomatik qo'shadi
+- Caller-supplied context **ustun** (field-by-field)
 
 ## Testlar
 
-**`apps/api/tests/`:** 49/49 ✅
+**`apps/api/tests/`:**
 - `audit.unit.test.ts` (12)
 - `auth.integration.test.ts` (3)
 - `notification.unit.test.ts` (13)
 - `oauth.security.test.ts` (6)
 - `outbox.test.ts` (3)
+- `request-id.unit.test.ts` (5) -- **YANGI**
+- `request-context.unit.test.ts` (5) -- **YANGI**
+- `security.unit.test.ts` (9) -- **YANGI**
 - `tenant.unit.test.ts` (12)
+- **Jami: 68/68 ✅**
+
+**Test muhiti:**
+- `apps/api/.env.test` -- `NODE_ENV=test`, `SKIP_AUTH_RATE_LIMIT=1`
+- `package.json` -- `tsx --env-file=.env --env-file=.env.test --test`
 
 ## Keyingi rejalar
 
-### Faza 1 — `access-control` testlari
-### Faza 2 — `iam` OutboxEventBus → EventEnvelope
-### Faza 3 — Middleware va xavfsizlik (Phase-0)
-- `requestId`, `AsyncLocalStorage`, rate limit (auth uchun 5 req/min)
-### Faza 4 — `AuthorizationPort` to'liq wire (JWT role claimlar)
-### Faza 5 — Data migration
-### Faza 6 — Documentation yangilash
-### Faza 7 — Boshqa modullar (billing, subscription, ...)
-### Faza 8 — Frontend
-### Faza 9 — CI/CD
+### Faza 1 -- `access-control` application testlari (davom)
+- Qolgan: `RevokeRoleHandler`, `CreatePolicyHandler`, `UpdatePolicyHandler`, `DeletePolicyHandler`, `ActivatePolicyHandler`, `DeactivatePolicyHandler`
+- Queries: `GetRoleHandler`, `ListRolesHandler`, ...
+- Integration testlar: `/api/v1/access-control/*`
+
+### Faza 2 -- `iam` OutboxPort -> EventContext
+- `iam/OutboxPort` ni `access-control` bilan bir xil qilish
+- `DrizzleIamOutboxRepository` -- context column'lar
+- `iam` handlers -- `context` uzatish
+- `iam-container.ts` -- `withAmbientContext` qo'llash
+
+### Faza 3 -- Documentation yangilash
+- `docs/PROGRESS.md`, `docs/architecture.md`
+
+### Faza 4 -- `AuthorizationPort` to'liq wire
+- `iam`dan `roleNames` -- `access-control`dan
+- JWT **role claim**lar to'ldirilishi
+
+### Faza 5 -- Data migration
+- Eski `identities`dan yangi jadvalga (`iam_v2`)
+
+### Faza 6 -- Boshqa modullar
+- `billing`, `subscription`, `catalog`, `media`, `search`, `analytics`, `reports`
+
+### Faza 7 -- Frontend
+- `apps/web`, `apps/admin`, `apps/mobile`, `apps/telegram`
+
+## Muhim eslatmalar
+
+1. **Network muammosi** -- GitHub push ishlamaydi (`Failed to connect to github.com:443`). Local commit saqlanadi.
+2. **BOM muammosi** -- `package.json` va `.sql` uchun `[System.IO.File]::WriteAllText(..., UTF8Encoding($false))`
+3. **PowerShell bloklar** -- uzoq bloklarda fayllar tushib qolishi mumkin -- bittalab yozilsin
+4. **`.js` kengaytmasi** -- ESM uchun majburiy
+5. **DomainEvent** -- `eventName` formati: `<module>.<aggregate>.<action>`
+6. **`super(id, version)`** -- AggregateRoot'da `version` **majburiy**
+7. **InMemoryRepository** -- testlar uchun **muhim**, har doim yozilsin
 
 ## Birinchi vazifa
 
@@ -226,6 +206,7 @@ src/
    - `docs/architecture.md`
    - `docs/PROGRESS.md`
    - `docs/CONVENTIONS.md`
+   - `docs/HANDOFF.md`
 
 2. **`git log --oneline -10`** ni ko'ring
 
@@ -235,7 +216,7 @@ src/
    - Qanday ishlashimizni tushundingizmi?
    - Keyingi qadam nima bo'lishi kerak?
 
-**Javobingizdan keyin** biz **Phase-0 (middleware va xavfsizlik)** ni boshlaymiz.
+**Javobingizdan keyin** biz **Faza 2** (`iam` OutboxPort) yoki **Faza 1** davomini boshlaymiz.
 
 ---
 
