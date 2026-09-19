@@ -86,3 +86,7 @@ export type { OAuthProvider } from './domain/oauth/OAuthProvider.js';
 export type { OAuthStateRepository } from './domain/oauth/OAuthStateRepository.js';
 export type { PolicyEvaluationContext } from './domain/policy/PolicyEvaluationContext.js';
 export { PolicyEffect } from './domain/policy/PolicyEffect.js';
+
+// Repository interfaces — for read access from other modules
+export type { UserRepository } from './domain/repositories/UserRepository.js';
+

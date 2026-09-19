@@ -25,6 +25,9 @@ export function createRoutes(container: AppContainer): IRouter {
   // Audit owns audit log routes.
   v1.use('/audit-logs', container.auditRouter);
 
+  // Notification owns notification routes.
+  v1.use('/notifications', container.notificationRouter);
+
   // The composition root mounts this router at /api in server.ts.
   router.use('/v1', v1);
 

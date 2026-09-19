@@ -2,9 +2,11 @@
 import { createAuthGuard, createIamRouter } from '@workspace/iam';
 import { createTenantRouter } from '@workspace/tenant';
 import { createAuditRouter } from '@workspace/audit';
+import { createNotificationRouter } from '@workspace/notification';
 import type { IamContainer } from './iam-container.js';
 import type { TenantContainer } from './tenant-container.js';
 import type { AuditContainer } from './audit-container.js';
+import type { NotificationContainer } from './notification-container.js';
 
 export function createIamRouterFromContainer(container: IamContainer): Router {
   return createIamRouter({
@@ -61,6 +63,17 @@ export function createAuditRouterFromContainer(
 ): Router {
   return createAuditRouter({
     listAuditLogs: container.listAuditLogs,
+    authGuard,
+  });
+}
+
+export function createNotificationRouterFromContainer(
+  container: NotificationContainer,
+  authGuard: ReturnType<typeof createAuthGuard>
+): Router {
+  return createNotificationRouter({
+    sendNotification: container.sendNotification,
+    listNotifications: container.listNotifications,
     authGuard,
   });
 }

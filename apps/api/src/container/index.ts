@@ -14,7 +14,13 @@ export {
   type AuditContainerOptions,
 } from './audit-container.js';
 export {
+  createNotificationContainer,
+  type NotificationContainer,
+  type NotificationContainerOptions,
+} from './notification-container.js';
+export {
   createIamRouterFromContainer,
   createTenantRouterFromContainer,
   createAuditRouterFromContainer,
+  createNotificationRouterFromContainer,
 } from './controllers.js';

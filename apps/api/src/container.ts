@@ -3,7 +3,9 @@
   type Logger,
   createPostgresDatabase,
   type PostgresDatabase,
+  SendgridEmailService,
 } from '@workspace/platform';
+import { PlatformEmailSender } from '@workspace/notification';
 import {
   createIamContainer,
   createIamRouterFromContainer,
@@ -11,8 +13,11 @@ import {
   createTenantRouterFromContainer,
   createAuditContainer,
   createAuditRouterFromContainer,
+  createNotificationContainer,
+  createNotificationRouterFromContainer,
   type IamContainerOptions,
 } from './container/index.js';
+import { ApiContactResolver } from './container/contact-resolver.js';
 import { createAuthGuard } from '@workspace/iam';
 
 export interface AppContainer {
@@ -21,13 +26,18 @@ export interface AppContainer {
   iamRouter: ReturnType<typeof createIamRouterFromContainer>;
   iamContainer: Awaited<ReturnType<typeof createIamContainer>>;
   tenantRouter: ReturnType<typeof createTenantRouterFromContainer>;
-  tenantContainer: ReturnType<typeof createTenantContainer>;
+  tenantContainer: Awaited<ReturnType<typeof createTenantContainer>>;
   auditRouter: ReturnType<typeof createAuditRouterFromContainer>;
   auditContainer: ReturnType<typeof createAuditContainer>;
+  notificationRouter: ReturnType<typeof createNotificationRouterFromContainer>;
+  notificationContainer: ReturnType<typeof createNotificationContainer>;
 }
 
 export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> {
   databaseUrl: string;
+  sendgridApiKey?: string;
+  emailFrom?: string;
+  telegramBotToken?: string;
 }
 
 export async function createContainer(options: ContainerOptions): Promise<AppContainer> {
@@ -58,6 +68,51 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     createAuthGuard(iamContainer.tokenService)
   );
 
+  // Optional email sender
+  let emailSender: PlatformEmailSender | undefined;
+  if (options.sendgridApiKey && options.emailFrom) {
+    const sendgridClient = {
+      async send(data: Record<string, unknown>): Promise<unknown> {
+        const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            authorization: `Bearer ${options.sendgridApiKey}`,
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: (data['to'] as string[] | string) }],
+            from: { email: data['from'] },
+            subject: data['subject'],
+            content: [
+              { type: 'text/plain', value: data['text'] ?? '' },
+              { type: 'text/html', value: data['html'] ?? data['text'] ?? '' },
+            ],
+          }),
+        });
+        if (!res.ok) {
+          throw new Error(`SendGrid responded ${res.status}`);
+        }
+        return { id: `sendgrid-${Date.now()}` };
+      },
+    };
+    const emailService = new SendgridEmailService(sendgridClient, options.emailFrom);
+    emailSender = new PlatformEmailSender({ emailService, from: options.emailFrom });
+  }
+
+  const contactResolver = new ApiContactResolver(iamContainer.getUser);
+
+  const notificationContainer = createNotificationContainer({
+    database,
+    eventBus: iamContainer.events,
+    contactResolver,
+    emailSender,
+    telegramBotToken: options.telegramBotToken,
+  });
+  const notificationRouter = createNotificationRouterFromContainer(
+    notificationContainer,
+    createAuthGuard(iamContainer.tokenService)
+  );
+
   return {
     logger,
     database,
@@ -67,5 +122,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     tenantContainer,
     auditRouter,
     auditContainer,
+    notificationRouter,
+    notificationContainer,
   };
 }
