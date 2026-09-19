@@ -49,6 +49,7 @@ Asosiy g'oyalar:
 - ✅ Infrastructure → Domain Interface (implements)
 - ✅ Domain → Domain (entity, VO, event)
 - ✅ Modul A → Modul B **event** orqali (event bus)
+- ✅ Modul A → Modul B **port** orqali (interface + adapter)
 
 **Taqiqlangan:**
 - ❌ Controller → Database
@@ -68,17 +69,17 @@ apps/                    # Deploy qilinadigan ilovalar
 └── telegram/            # grammY bot
 
 modules/                 # Domen modullari
-├── iam/                 # ✅ Identity & Access Management
+├── iam/                 # ✅ Auth + Users + OAuth
+├── access-control/      # ✅ RBAC + ABAC
 ├── tenant/              # ✅ Multi-tenancy
-├── audit/               # ✅ Audit log (event-driven)
-├── notification/        # ✅ Email + Telegram + Push
-├── access-control/      # 🟡 RBAC/ABAC (iam dan ajratilgan)
+├── audit/               # ✅ Event-driven audit log
+├── notification/        # ✅ Email + Telegram
 ├── billing/             # 🟡 To'lovlar
 ├── subscription/        # 🟡 SaaS obuna
 ├── catalog/             # 🟡 Biznes ma'lumotlar
 ├── content/             # 🟡 Kontent boshqaruvi
-├── media/               # 🟡 Fayl yuklash (S3/MinIO)
-├── search/              # 🟡 Qidiruv (Elasticsearch)
+├── media/               # 🟡 Fayl yuklash
+├── search/              # 🟡 Qidiruv
 ├── analytics/           # 🟡 Analitika
 ├── reports/             # 🟡 Hisobotlar
 ├── advertising/         # 🟡 Reklama
@@ -89,23 +90,15 @@ modules/                 # Domen modullari
 └── admin/               # 🟡 Admin
 
 packages/                # Umumiy kutubxonalar
-├── kernel/              # DDD asoslari
+├── kernel/              # DDD asoslari + EventMetadata
 ├── platform/            # Platforma servislari
 ├── contracts/           # Umumiy tiplar
 ├── ui/                  # UI komponentlar
 └── tooling/             # ESLint, Prettier, tsconfig
 
-lib/                     # Generatsiya qilinadigan API klientlar
-├── api-spec/            # OpenAPI kontrakt
-├── api-zod/             # Zod sxemalar (Orval)
-└── api-client-react/    # React Query klient
-
+lib/                     # API klientlar
 tests/                   # Umumiy testlar
-├── e2e/                 # Playwright
-└── integration/         # Bo'sh
-
-deployment/              # Docker, K8s, scripts
-└── ...
+deployment/              # Docker, K8s
 ```
 
 ## Modul tuzilishi (DDD)
@@ -114,107 +107,132 @@ Har bir modul **4 qatlamdan** iborat:
 
 ```
 modules/<module>/src/
-├── domain/                          # Sof biznes-logika
-│   ├── <Aggregate>.ts               # Aggregate Root
-│   ├── <Entity>.ts                  # Entity
-│   ├── <VO>.ts                      # Value Object
-│   ├── <Enum>.ts                    # Enum
-│   ├── events/                      # Domain Events
+├── domain/
+│   ├── <Aggregate>.ts
+│   ├── <Entity>.ts
+│   ├── <VO>.ts
+│   ├── <Enum>.ts
+│   ├── events/
 │   │   ├── <Name>Event.ts
 │   │   └── index.ts
-│   ├── repositories/                # Repository interfeyslar
+│   ├── repositories/
 │   │   └── <Name>Repository.ts
 │   └── index.ts
-│
-├── application/                     # Use case'lar
-│   ├── ports/                       # Interfeyslar
+├── application/
+│   ├── ports/
 │   │   ├── ApplicationError.ts
 │   │   ├── EventBusPort.ts
 │   │   ├── OutboxPort.ts
-│   │   └── <Module>UnitOfWork.ts
-│   ├── commands/                    # Yozish operatsiyalari
+│   │   ├── <Module>UnitOfWork.ts
+│   │   └── index.ts
+│   ├── commands/
 │   │   ├── <action>/
 │   │   │   ├── <Action>Command.ts
 │   │   │   ├── <Action>Handler.ts
 │   │   │   ├── <Action>Result.ts
 │   │   │   └── index.ts
 │   │   └── index.ts
-│   ├── queries/                     # O'qish operatsiyalari
+│   ├── queries/
 │   │   ├── <Name>View.ts
 │   │   ├── <action>/
 │   │   │   ├── <Action>Query.ts
 │   │   │   ├── <Action>Handler.ts
 │   │   │   └── index.ts
 │   │   └── index.ts
-│   ├── event-handlers/              # Event subscriber'lar
-│   │   ├── subscribed-events.ts
-│   │   ├── <Module>EventSubscriber.ts
-│   │   └── index.ts
+│   ├── event-handlers/
+│   ├── services/
 │   └── index.ts
-│
-├── infrastructure/                  # Tashqi dunyo
+├── infrastructure/
 │   ├── database/
-│   │   ├── schema/                  # Drizzle sxemalar
+│   │   ├── schema/
 │   │   │   ├── <table>.table.ts
 │   │   │   └── index.ts
-│   │   └── migrations/              # SQL migratsiyalar
-│   │       └── 0001_create_<table>.sql
-│   ├── mappers/                     # Domain ↔ Persistence
-│   │   └── <Name>Mapper.ts
-│   ├── repositories/                # Implementatsiyalar
+│   │   ├── migrations/
+│   │   │   └── 0001_create_<table>.sql
+│   │   └── <Module>UnitOfWork.ts
+│   ├── mappers/
+│   ├── repositories/
 │   │   ├── Drizzle<Name>Repository.ts
 │   │   └── InMemory<Name>Repository.ts
-│   ├── senders/                     # (notification uchun)
 │   └── index.ts
-│
-├── presentation/                    # HTTP qatlami
+├── presentation/
 │   ├── http/
 │   │   ├── controllers/
-│   │   │   └── <Name>Controller.ts
 │   │   ├── middleware/
-│   │   │   └── ValidateRequest.ts
 │   │   └── validators/
-│   │       ├── <Action>Validator.ts
-│   │       └── index.ts
 │   └── index.ts
-│
-└── index.ts                         # Public API (re-export)
+└── index.ts
 ```
 
 ## Event-driven arxitektura
 
-### Domain Events
+### Domain Events (minimal)
 
 Har bir **aggregate** o'z **event'larini** chiqaradi:
 
 ```typescript
-export class TenantCreatedEvent implements DomainEvent {
+export class RoleCreatedEvent implements DomainEvent {
   readonly eventId = randomUUID();
-  readonly eventName = 'tenant.created';
+  readonly eventName = 'access-control.role.created';
   readonly occurredAt = new Date();
-  readonly aggregateType = 'Tenant';
-  
+  readonly aggregateType = 'Role';
+
   constructor(
     readonly aggregateId: string,
-    readonly tenantId: string,
+    readonly tenantId: string | null,
     readonly name: string,
-    readonly slug: string,
+    readonly isSystem: boolean,
   ) {}
 }
 ```
+
+### Event Metadata (cross-cutting)
+
+**`@workspace/kernel`** — event metadata envelope:
+
+```typescript
+export interface EventMetadata {
+  readonly correlationId?: string;
+  readonly causationId?: string;
+  readonly actorId?: string;
+  readonly tenantId?: string | null;
+  readonly recordedAt?: Date;
+  readonly aggregateVersion?: number;
+  readonly schemaVersion?: number;
+  readonly extras?: Readonly<Record<string, unknown>>;
+}
+
+export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
+  readonly event: TEvent;
+  readonly metadata: EventMetadata;
+}
+
+export interface EventContext {
+  readonly correlationId?: string;
+  readonly causationId?: string;
+  readonly actorId?: string;
+  readonly tenantId?: string | null;
+  readonly extras?: Readonly<Record<string, unknown>>;
+}
+```
+
+**Helpers:** `envelopeOf`, `mergeContext`, `metadataFromContext`, `EMPTY_EVENT_CONTEXT`.
 
 ### Outbox Pattern
 
 Event'lar **transaction** ichida **outbox** jadvalga yoziladi:
 
 ```typescript
-const tenant = Tenant.create({ ... }).getOrThrow();
-await tenantRepository.save(tenant);
-
-// Events in outbox (same transaction)
-const events = tenant.pullDomainEvents();
-await outbox.enqueueAll(events);
+await this.uow.withTransaction(async (tx) => {
+  await tx.roles.save(role);
+  await tx.outbox.enqueueAll(role.pullDomainEvents());
+});
 ```
+
+**OutboxPort** (access-control):
+- `enqueue(event, context?)`
+- `enqueueAll(events, context?)`
+- `enqueueEnvelopes(envelopes)`
 
 ### Event Subscriber'lar
 
@@ -223,57 +241,65 @@ Boshqa modul **event'larini** **tinglaydi**:
 ```typescript
 export class AuditEventSubscriber {
   async handle(event: DomainEvent): Promise<void> {
-    if (event.eventName === 'tenant.created') {
-      await this.recordAudit.execute({
-        eventType: AuditEventType.TenantCreated,
-        actorId: String(event.ownerUserId),
-        ...
-      });
+    if (event.eventName === 'access-control.role.created') {
+      await this.recordAudit.execute({ /* ... */ });
     }
   }
 }
 ```
 
-**Muhim:** EventBus **wildcard qo'llab-quvvatlamaydi**. Har bir event **alohida** subscribe qilinadi:
-
-```typescript
-for (const eventName of AUDITED_EVENT_NAMES) {
-  eventBus.subscribe(eventName, { handle: (e) => subscriber.handle(e) });
-}
-```
+**Muhim:** EventBus **wildcard qo'llab-quvvatlamaydi** — har bir event **alohida** subscribe qilinadi.
 
 ## Modul chegaralari
 
-### `notification` va `iam` — **ContactResolver** port
+### `iam` ↔ `access-control` — AuthorizationPort
 
-`notification` **`iam`** dan **email** olishi kerak. Lekin **to'g'ridan-to'g'ri import** — **taqiqlangan**.
+`iam` **`access-control`**ni **to'g'ridan-to'g'ri import qilmaydi**.
 
-**Yechim:** `ContactResolver` port:
+**Yechim:** `AuthorizationPort`:
 
 ```typescript
-// notification/application/ports/ContactResolver.ts
-export interface ContactResolver {
-  resolve(recipientId: string, channel: NotificationChannel): Promise<ResolvedContact | null>;
+// iam/application/ports/AuthorizationPort.ts
+export interface AuthorizationPort {
+  getRoleNames(userId: string): Promise<string[]>;
+  checkPermission(input: {
+    userId: string;
+    resource: string;
+    action: string;
+    resourceAttributes?: Record<string, unknown>;
+    environmentAttributes?: Record<string, unknown>;
+  }): Promise<{ allowed: boolean; reason: string }>;
 }
 ```
 
-**Implementatsiya** — `apps/api` da:
+**Implementatsiya** — `access-control`da:
 
 ```typescript
-// apps/api/src/container/contact-resolver.ts
-export class ApiContactResolver implements ContactResolver {
-  constructor(private readonly getUser: GetUserHandler) {}
-  
-  async resolve(recipientId, channel) {
-    if (channel !== NotificationChannel.Email) return null;
-    const user = await this.getUser.execute({ userId: recipientId });
-    if (!user) return null;
-    return { channel, value: user.email };
-  }
+// access-control/application/adapters/AccessControlAuthorizationAdapter.ts
+export class AccessControlAuthorizationAdapter implements AuthorizationPort {
+  constructor(
+    private readonly checkPermissionHandler: CheckPermissionHandler,
+    private readonly listUserRolesHandler: ListUserRolesHandler,
+  ) {}
+
+  async getRoleNames(userId: string): Promise<string[]> { /* ... */ }
+  async checkPermission(input): Promise<{ allowed: boolean; reason: string }> { /* ... */ }
 }
 ```
 
-**Muhim:** `notification` `iam` **domain**ini **bilmaydi**. Faqat **`GetUserHandler`** (application) orqali.
+**Wire** — `apps/api`:
+
+```typescript
+const authorization = new AccessControlAuthorizationAdapter(
+  accessControlContainer.checkPermission,
+  accessControlContainer.listUserRoles,
+);
+const iamContainer = await createIamContainer({ database, authorization });
+```
+
+### `notification` ↔ `iam` — ContactResolver
+
+Xuddi shunday `ContactResolver` port orqali.
 
 ## Xato boshqaruvi
 
@@ -283,11 +309,6 @@ export class ApiContactResolver implements ContactResolver {
 export class DomainError extends Error {
   constructor(readonly code: string, message: string) { super(message); }
 }
-
-// Result pattern
-const result = User.create({ ... });
-if (result.isErr()) return err(result.error);
-const user = result.value;
 ```
 
 ### Application
@@ -299,18 +320,11 @@ export class ApplicationError extends Error {
   }
 }
 
-export class ValidationApplicationError extends ApplicationError {
-  constructor(message: string) { super('VALIDATION_ERROR', message, 400); }
-}
-export class ConflictApplicationError extends ApplicationError {
-  constructor(message: string) { super('CONFLICT', message, 409); }
-}
-export class NotFoundApplicationError extends ApplicationError {
-  constructor(message: string) { super('NOT_FOUND', message, 404); }
-}
-export class InternalApplicationError extends ApplicationError {
-  constructor(message: string) { super('INTERNAL_ERROR', message, 500); }
-}
+export class ValidationApplicationError extends ApplicationError { /* 400 */ }
+export class ConflictApplicationError extends ApplicationError { /* 409 */ }
+export class NotFoundApplicationError extends ApplicationError { /* 404 */ }
+export class ForbiddenApplicationError extends ApplicationError { /* 403 */ }
+export class InternalApplicationError extends ApplicationError { /* 500 */ }
 ```
 
 ### HTTP
@@ -320,7 +334,7 @@ export class InternalApplicationError extends ApplicationError {
   "success": false,
   "error": {
     "code": "CONFLICT",
-    "message": "Tenant slug \"acme\" is already taken"
+    "message": "Role \"admin\" is already taken"
   }
 }
 ```
@@ -331,52 +345,46 @@ Har bir modul **o'z migratsiyalarini** saqlaydi:
 
 ```
 modules/<module>/src/infrastructure/database/migrations/
-├── 0001_create_<table>.sql
-├── 0002_add_<column>.sql
+├── 0001_<action>.sql
+├── 0002_<action>.sql
 └── ...
 ```
 
-**`SqlMigrationRunner`** — barcha migratsiyalarni **tartib bilan** ishga tushiradi:
-
-```typescript
-await runSqlMigrations(db, 'modules/iam/src/infrastructure/database/migrations');
-await runSqlMigrations(db, 'modules/tenant/src/infrastructure/database/migrations');
-// ...
-```
+**`SqlMigrationRunner`** (`@workspace/platform`) — barcha migratsiyalarni tartib bilan ishga tushiradi.
 
 **Xususiyatlar:**
-- **BOM** olib tashlanadi
-- **Empty** fayllar o'tkazib yuboriladi
-- **`BEGIN; ... COMMIT;`** — transaction
-- **`CREATE TABLE IF NOT EXISTS`** — idempotent
+- BOM olib tashlanadi
+- Empty fayllar o'tkazib yuboriladi
+- `BEGIN; ... COMMIT;` — transaction
+- `CREATE TABLE IF NOT EXISTS` — idempotent
+
+### Enterprise schema pattern
+
+- **UUID** primary keys — `uuid('id').primaryKey().defaultRandom()`
+- **TIMESTAMPTZ** — `timestamp('created_at', { withTimezone: true })`
+- **Partial unique indexes** — `WHERE deleted_at IS NULL`
+- **`version` column** — optimistic concurrency
+- **`tenant_id` nullable** — multi-tenancy
+- **CITEXT email** — case-insensitive
+- **JSONB** — `subjects`, `resources`, `actions`, `conditions`
+- **GIN index** — JSONB overlap (`?|`)
+- **`updated_at` triggers**
 
 ## Testlar
 
 ### Unit testlar
 
-**`node:test`** (Node.js built-in) ishlatiladi:
+**`node:test`** + **InMemory repository**'lar:
 
 ```typescript
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-test('Tenant.create() builds an active tenant', () => {
-  const result = Tenant.create({ ... });
+test('Role.create() builds an active role', () => {
+  const name = RoleName.create('admin').getOrThrow();
+  const result = Role.create({ name, description: '', permissions: [] });
   assert.equal(result.isOk(), true);
 });
-```
-
-**In-memory repository'lar** ishlatiladi:
-
-```typescript
-const repository = new InMemoryTenantRepository();
-const handler = new CreateTenantHandler(repository, memberRepository, eventBus);
-```
-
-**Fake sender'lar**:
-
-```typescript
-const emailSender = new FakeNotificationSender(NotificationChannel.Email);
 ```
 
 ### Integration testlar
@@ -393,7 +401,6 @@ before(async () => {
   server = await new Promise<Server>((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
   });
-  ...
 });
 ```
 
@@ -401,34 +408,35 @@ before(async () => {
 
 | Tur | Nom | Misol |
 |---|---|---|
-| **Aggregate Root** | PascalCase | `Tenant.ts`, `User.ts` |
-| **Entity** | PascalCase | `Member.ts` |
-| **Value Object** | PascalCase + `Id`/nom | `TenantId.ts`, `Email.ts` |
-| **Enum** | PascalCase | `TenantStatus.ts` |
-| **Domain Event** | PascalCase + `Event` | `TenantCreatedEvent.ts` |
-| **Command** | PascalCase + `Command` | `CreateTenantCommand.ts` |
-| **Handler** | PascalCase + `Handler` | `CreateTenantHandler.ts` |
-| **Result** | PascalCase + `Result` | `CreateTenantResult.ts` |
-| **Query** | PascalCase + `Query` | `GetTenantQuery.ts` |
-| **View** | PascalCase + `View` | `TenantView.ts` |
-| **Repository interface** | PascalCase + `Repository` | `TenantRepository.ts` |
-| **Drizzle repo** | `Drizzle` + PascalCase | `DrizzleTenantRepository.ts` |
-| **InMemory repo** | `InMemory` + PascalCase | `InMemoryTenantRepository.ts` |
-| **Mapper** | PascalCase + `Mapper` | `TenantMapper.ts` |
-| **Controller** | PascalCase + `Controller` | `TenantController.ts` |
-| **Validator** | PascalCase + `Validator` | `CreateTenantValidator.ts` |
-| **Table** | kebab-case + `.table.ts` | `tenants.table.ts` |
-| **Migration** | `NNNN_<action>.sql` | `0001_create_tenants.sql` |
+| Aggregate Root | `PascalCase.ts` | `Role.ts`, `User.ts`, `Policy.ts` |
+| Entity | `PascalCase.ts` | `Member.ts` |
+| Value Object | `PascalCase.ts` | `RoleId.ts`, `Email.ts` |
+| Enum | `PascalCase.ts` | `UserStatus.ts` |
+| Domain Event | `PascalCaseEvent.ts` | `RoleCreatedEvent.ts` |
+| Command | `PascalCaseCommand.ts` | `CreateRoleCommand.ts` |
+| Handler | `PascalCaseHandler.ts` | `CreateRoleHandler.ts` |
+| Result | `PascalCaseResult.ts` | `CreateRoleResult.ts` |
+| Query | `PascalCaseQuery.ts` | `GetRoleQuery.ts` |
+| View | `PascalCaseView.ts` | `RoleView.ts` |
+| Port | `PascalCasePort.ts` | `AuthorizationPort.ts` |
+| Repository interface | `PascalCaseRepository.ts` | `RoleRepository.ts` |
+| Drizzle repo | `DrizzlePascalCaseRepository.ts` | `DrizzleRoleRepository.ts` |
+| InMemory repo | `InMemoryPascalCaseRepository.ts` | `InMemoryRoleRepository.ts` |
+| Mapper | `PascalCaseMapper.ts` | `RoleMapper.ts` |
+| Controller | `PascalCaseController.ts` | `RoleController.ts` |
+| Validator | `PascalCaseValidator.ts` | `CreateRoleValidator.ts` |
+| Table | `kebab-case.table.ts` | `roles.table.ts`, `outbox-events.table.ts` |
+| Migration | `NNNN_<action>.sql` | `0001_create_access_control.sql` |
 
 ## Nomlash qoidalari
 
-- **Aggregate/Entity/Value Object** — **PascalCase** (`Tenant`, `Member`, `TenantId`)
+- **Aggregate/Entity/Value Object** — **PascalCase** (`Role`, `Member`, `RoleId`)
 - **Method** — **camelCase** (`create`, `reconstruct`, `markAsSent`)
 - **Private field** — **`_`** prefiks (`_name`, `_status`)
 - **Getter** — **camelCase** (`name`, `status`, `createdAt`)
-- **Enum** — **PascalCase** nom, **PascalCase** qiymat (`TenantStatus.Active = 'active'`)
-- **Type/Interface** — **PascalCase** (`TenantRepository`, `CreateTenantCommand`)
-- **Function** — **camelCase** (`createTenant`, `findById`)
+- **Enum** — **PascalCase** nom, **PascalCase** qiymat
+- **Type/Interface** — **PascalCase** (`RoleRepository`, `CreateRoleCommand`)
+- **Event name** — **`<module>.<aggregate>.<action>`** (masalan, `access-control.role.created`)
 
 ## Kelajakdagi pattern'lar
 
@@ -437,3 +445,22 @@ before(async () => {
 - **Saga/Process Manager** — Murakkab workflow'lar uchun (kelajakda)
 - **Event Sourcing** — To'liq event tarixi (kelajakda, agar kerak bo'lsa)
 - **Multi-tenancy** — Row-level isolation (hozir shared schema)
+
+## Middleware va xavfsizlik (Phase-0)
+
+**`apps/api/src/middleware.ts`**:
+- `trust proxy` — proxy hop
+- `pino-http` — request logging
+- `helmet` — security headers
+- `cors` — whitelist
+- `compression` — gzip
+- `cookie-parser` — OAuth
+- `express.json` / `urlencoded` — body parse
+- `express-rate-limit` — global (300 req/min)
+- `express-slow-down` — brute-force himoyasi
+
+**Rejalashtirilgan:**
+- `requestId` middleware — `X-Request-ID`, `crypto.randomUUID()`
+- `AsyncLocalStorage` — `correlationId`, `actorId`, `tenantId`
+- `correlationId` — outbox'ga avtomatik
+- Auth endpoint'lar uchun alohida rate limit (5 req/min)

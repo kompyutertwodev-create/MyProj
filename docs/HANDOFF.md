@@ -8,11 +8,19 @@ Uni **nusxa ko'chirib**, yangi oynaga **yopishtiring**.
 ## Prompt (yangi oynaga)
 
 ```markdown
-# Identity Platform — loyiha konteksti
+# Identity Platform — yangi oyna uchun to'liq kontekst
 
-## Sizning vazifangiz
+## Sizning rolingiz
 
-Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform** loyihasida **davom ettiruvchi** ishlaysiz. Men bilan **faza-faza** ishlab, **professional darajada** modullar yozasiz.
+Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform** loyihasida davom ettiruvchi sifatida ishlaysiz. Men bilan **faza-faza** ishlab, **professional darajada** modullar yozasiz.
+
+**Muhim uslub:**
+- **O'zbek tilida** muloqot qiling (kod **ingliz** tilida)
+- **Har doim** kod **yozishdan oldin** tahlil qiling
+- **Har doim** PowerShell buyruqlarini **bittalab** bering
+- **Har doim** kod **yozgandan keyin** `pnpm typecheck` va `pnpm test` ishlatishni so'rang
+- **Xato** bo'lsa — **to'liq matnini** so'rang
+- **BOM muammosi**: `package.json` va `.sql` uchun `[System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($false))`
 
 ## Loyiha haqida
 
@@ -21,109 +29,213 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 
 - **GitHub:** https://github.com/kompyutertwodev-create/MyProj
 - **Lokal:** `E:\BarchaLoyihalarim\MyProj`
+- **Branch:** `feature/access-control-extraction`
 - **Til:** TypeScript 5.9
 - **Monorepo:** pnpm workspace
-- **DB:** PostgreSQL (Supabase)
-- **Test:** `node:test` (58/58 o'tdi)
+- **DB:** PostgreSQL (Supabase pooler)
+- **Test:** `node:test` (49/49 ✅)
+- **Typecheck:** 39/39 workspace ✅
 
-## Sizning birinchi vazifangiz
-
-Quyidagi fayllarni **o'qing** (GitHub'dan yoki lokaldan):
-
-1. **`README.md`** — loyiha haqida umumiy
-2. **`docs/architecture.md`** — to'liq arxitektura
-3. **`docs/PROGRESS.md`** — bajarilgan ishlar
-4. **`docs/CONVENTIONS.md`** — kod uslubi
-
-Va **`git log --oneline -20`** ni ko'ring.
-
-## Joriy holat
+## Hozirgi holat (2026-09-19)
 
 ### Tugallangan modullar ✅
 
-- `@workspace/kernel` — DDD asoslari
-- `@workspace/platform` — logger, DB, email, messaging
-- `@workspace/contracts` — tiplar
-- `@workspace/iam` — auth, RBAC, ABAC, OAuth
-- `@workspace/tenant` — multi-tenancy
-- `@workspace/audit` — event-driven audit
-- `@workspace/notification` — email + Telegram (enterprise)
+- `@workspace/kernel` — DDD + **EventMetadata, EventEnvelope, EventContext, sha256Hex**
+- `@workspace/platform` — Logger, PostgreSQL, email, messaging, cache, migrations
+- `@workspace/contracts` — Umumiy tiplar
+- `@workspace/iam` — **Auth + Users + OAuth** (RBAC olib tashlangan)
+- `@workspace/access-control` — **RBAC + ABAC** (to'liq DDD stack)
+- `@workspace/tenant` — Multi-tenancy
+- `@workspace/audit` — Event-driven audit log
+- `@workspace/notification` — Email + Telegram (enterprise)
 
-### `apps/api` — barcha modullar ulangan
+### Skelet 🟡
+- `billing`, `subscription`, `catalog`, `media`, `search`, `analytics`, `reports`, `advertising`, `integrations`, `social`, `devices`, `features`, `admin`, `viewing`
 
-- Routes: `/api/v1/auth`, `/api/v1/users`, `/api/v1/roles`, `/api/v1/permissions`, `/api/v1/policies`, `/api/v1/tenants`, `/api/v1/audit-logs`, `/api/v1/notifications`
-- **58/58 test** o'tdi
-- **39/39 typecheck** o'tdi
+### Ilovalar
+- `apps/api` ✅ (iam + access-control + tenant + audit + notification)
+- `apps/web`, `apps/admin`, `apps/mobile`, `apps/telegram` 🟡
 
-### Keyingi qadam
+### Oxirgi commitlar
+```
+db3128d feat(iam): add AuthorizationPort for cross-module RBAC
+00f1f24 refactor(iam): extract RBAC to access-control, enterprise schema rewrite
+c78c9c5 feat(access-control): add event metadata envelope
+13a58f3 feat(access-control): add RBAC + ABAC module with full DDD stack
+93ce109 docs: add README, architecture, progress, conventions, and handoff
+```
 
-- `modules/access-control` — RBAC/ABAC ni `iam` dan **ajratish**
-- Keyin: `subscription`, `billing`, `catalog`, `media`, `search`, `analytics`, `reports`
+## Arxitektura tamoyillari
 
-## Ishlash tartibi (muhim!)
+### DDD 4 qatlam
+```
+Presentation → Application → Domain ← Infrastructure
+```
 
-Biz **faza-faza** ishlaymiz. Har bir modul **7-10 fazaga** bo'linadi:
+### Taqiqlangan
+- ❌ Controller → DB
+- ❌ Domain → tashqi kutubxona
+- ❌ Modul A → Modul B **to'g'ridan-to'g'ri import**
 
-1. **Faza 1:** Domain (aggregate, entity, VO, events, repository interface)
-2. **Faza 2:** Domain events
-3. **Faza 3:** Application ports
-4. **Faza 4:** Application (commands, queries)
-5. **Faza 5:** Infrastructure (schema, migrations, mappers, repositories)
-6. **Faza 6:** Adapters (agar kerak bo'lsa)
-7. **Faza 7:** Presentation (controller, validators)
-8. **Faza 8:** Integration (`apps/api` ga ulash)
-9. **Faza 9:** Event handlers (agar kerak bo'lsa)
-10. **Faza 10:** Testlar
+### Ruxsat
+- ✅ Event orqali
+- ✅ Port orqali (`AuthorizationPort`, `ContactResolver`)
 
-### Har bir fazada:
+## Modul chegaralari
 
-1. Men **PowerShell buyruqlarini** beraman (`Set-Content` yoki `[System.IO.File]::WriteAllText`)
-2. Siz **nusxa ko'chirib**, terminalga **yopishtirasiz** va `Enter` bosasiz
-3. Fayl yaratilgach, **`pnpm typecheck`** ishga tushirasiz
-4. **Xato bo'lsa** — **to'liq matnini** menga yuborasiz
-5. Men **tuzataman**
-6. Keyingi fazaga o'tamiz
+**`iam`** va **`access-control`** — **bir-birini import qilmaydi**:
+- `iam` — **`AuthorizationPort`** (interface)
+- `access-control` — **`AccessControlAuthorizationAdapter`** (implement)
+- `apps/api` — **composition root** da wire qiladi
 
-### Muhim qoidalar:
-
-- **Har bir faylni alohida** nusxa ko'chirish (PowerShell uzun bloklarda fayllar **tushib qolishi** mumkin)
-- **`package.json`** va **`.sql`** uchun **`[System.IO.File]::WriteAllText`** (BOM'siz)
-- **`.ts`** uchun `Set-Content -Encoding utf8` (BOM muammo emas)
-- **Xato bo'lsa** — **to'liq matnini** yuborish (parolsiz)
-- **Test** ishga tushirish: `cd apps/api && pnpm test -- tests/<name>.test.ts`
-
-## Kod uslubi (qisqacha)
+## Kod uslubi
 
 - **DDD qatlamlar:** domain → application → infrastructure → presentation
 - **Result pattern:** `Result<T, DomainError>` (domain), `Result<T, ApplicationError>` (application)
 - **Aggregate Root:** `create()` + `reconstruct()` + business methods
 - **Value Object:** `create()` + `getOrThrow()` + `equals()`
 - **Event:** `eventId`, `eventName`, `occurredAt`, `aggregateId`, `aggregateType`
+- **Event name:** `<module>.<aggregate>.<action>` (masalan, `access-control.role.created`)
 - **Command/Handler:** har biri o'z papkasida + `index.ts`
 - **Repository:** interface (domain) + Drizzle/InMemory (infrastructure)
 - **Mapper:** `toDomain()` + `toPersistence()`
 - **Controller:** `create<Name>Router(deps)` factory
 - **Validator:** Zod schemas
 - **Import:** `.js` kengaytmasi **majburiy** (ESM)
+- **`super(id, version)`** — AggregateRoot'da `version` **majburiy**
 
-Batafsil: **`docs/CONVENTIONS.md`**
+Batafsil: `docs/CONVENTIONS.md`
 
-## Modul chegaralari
+## Migration pattern (enterprise)
 
-- **Modul A → Modul B** — **to'g'ridan-to'g'ri import taqiqlangan**
-- **Event orqali** — ruxsat etilgan
-- **Port orqali** — ruxsat etilgan (masalan, `ContactResolver`)
+- **UUID** primary keys
+- **TIMESTAMPTZ**
+- **Partial unique indexes** (`WHERE deleted_at IS NULL`)
+- **`version` column** (optimistic concurrency)
+- **`tenant_id` nullable** (multi-tenancy)
+- **CITEXT email** (case-insensitive)
+- **JSONB** + **GIN index**
+- **`updated_at` triggers**
+- **Idempotent** (`IF NOT EXISTS` / `OR REPLACE`)
 
-## Sizga savol
+## Event metadata pattern
 
-Iltimos, **qisqa javob** yozing:
+**`@workspace/kernel`**:
+- `EventMetadata` — 8 field
+- `EventEnvelope<TEvent>` — `{ event, metadata }`
+- `EventContext` — request scoped
+- Helpers: `envelopeOf`, `mergeContext`, `metadataFromContext`, `EMPTY_EVENT_CONTEXT`
 
-1. **Loyiha nima ekanini** tushundingizmi?
-2. **Qayerda ekanimizni** bilasizmi? (qaysi modullar tugallangan, qaysilari yo'q)
-3. **Qanday ishlashimizni** tushundingizmi? (faza-faza, typecheck, testlar)
-4. **Keyingi qadam** nima bo'lishi kerak?
+**`access-control`**:
+- `OutboxPort` — `enqueue(event, context?)`, `enqueueAll(events, context?)`, `enqueueEnvelopes(envelopes)`
+- `DrizzleOutboxRepository` — metadata columns
 
-**Javobingizdan keyin** — biz **`modules/access-control`** ni boshlaymiz.
+## `iam` hozirgi holati
+
+**Schema** (`0001_iam_v2_schema.sql`):
+- `identities` — UUID, CITEXT email, soft delete, tenant_id, version, MFA
+- `iam_sessions` — UUID, `refresh_token_hash`, revoked_at, version
+- `social_identities` — UUID, CITEXT provider_email
+- `iam_devices` — UUID, updated_at
+- `iam_oauth_states` — TIMESTAMPTZ
+- `iam_outbox_events` — platform `OutboxStore` pattern
+
+**Domain:** `User` (softDelete, tenantId, version), `Session` (`refreshTokenHash`)
+
+**Application:** `LoginUserHandler`, `OAuthLoginHandler`, `AuthService` — `authorization?: AuthorizationPort`
+
+**Olib tashlangan:** RBAC (Role, Permission, Policy, handlers, controllers, guards)
+
+## `access-control` hozirgi holati
+
+**Domain:**
+- `Role`, `Permission`, `Policy`, `RoleAssignment` (AggregateRoot'lar)
+- 13 ta domain event
+
+**Application:**
+- **12 commands**, **7 queries**, **PolicyEvaluator**
+- **`AccessControlAuthorizationAdapter`** — `AuthorizationPort` implement
+
+**Infrastructure:**
+- Drizzle schema (UUID, TIMESTAMPTZ, JSONB, GIN)
+- Drizzle + InMemory repos
+- `RbacSeeder` (idempotent)
+- Migration `0001_create_access_control.sql`, `0002_add_event_metadata.sql`
+
+**Presentation:** 19 endpoint under `/api/v1/access-control/*`
+
+## `apps/api` integratsiya
+
+```
+src/
+├── bootstrap.ts
+├── server.ts
+├── routes.ts
+├── middleware.ts
+├── errors.ts
+├── config.ts
+├── health.ts
+└── container/
+    ├── index.ts
+    ├── controllers.ts
+    ├── iam-container.ts
+    ├── access-control-container.ts
+    ├── tenant-container.ts
+    ├── audit-container.ts
+    ├── notification-container.ts
+    └── contact-resolver.ts
+```
+
+**Route'lar:** `/api/v1/{auth, identity, tenants, audit-logs, notifications, access-control}`
+
+**Composition root tartibi:**
+1. `access-control` (birinchi — authorization adapter uchun)
+2. `iam` (authorization bilan)
+3. `tenant`, `audit`, `notification`
+4. Re-mount `access-control` with real authGuard
+
+## Testlar
+
+**`apps/api/tests/`:** 49/49 ✅
+- `audit.unit.test.ts` (12)
+- `auth.integration.test.ts` (3)
+- `notification.unit.test.ts` (13)
+- `oauth.security.test.ts` (6)
+- `outbox.test.ts` (3)
+- `tenant.unit.test.ts` (12)
+
+## Keyingi rejalar
+
+### Faza 1 — `access-control` testlari
+### Faza 2 — `iam` OutboxEventBus → EventEnvelope
+### Faza 3 — Middleware va xavfsizlik (Phase-0)
+- `requestId`, `AsyncLocalStorage`, rate limit (auth uchun 5 req/min)
+### Faza 4 — `AuthorizationPort` to'liq wire (JWT role claimlar)
+### Faza 5 — Data migration
+### Faza 6 — Documentation yangilash
+### Faza 7 — Boshqa modullar (billing, subscription, ...)
+### Faza 8 — Frontend
+### Faza 9 — CI/CD
+
+## Birinchi vazifa
+
+**Iltimos:**
+
+1. **Quyidagi fayllarni o'qing** (GitHub yoki lokal):
+   - `README.md`
+   - `docs/architecture.md`
+   - `docs/PROGRESS.md`
+   - `docs/CONVENTIONS.md`
+
+2. **`git log --oneline -10`** ni ko'ring
+
+3. **Qisqa javob yozing:**
+   - Loyiha nima ekanini tushundingizmi?
+   - Qayerda ekanimizni bilasizmi?
+   - Qanday ishlashimizni tushundingizmi?
+   - Keyingi qadam nima bo'lishi kerak?
+
+**Javobingizdan keyin** biz **Phase-0 (middleware va xavfsizlik)** ni boshlaymiz.
 
 ---
 

@@ -42,6 +42,7 @@
 | Drizzle repo | `DrizzlePascalCaseRepository.ts` | `DrizzleTenantRepository.ts` |
 | InMemory repo | `InMemoryPascalCaseRepository.ts` | `InMemoryTenantRepository.ts` |
 | Adapter | `PlatformPascalCase.ts` / `PascalCaseSender.ts` | `PlatformEmailSender.ts` |
+| Event Envelope | `PascalCaseEnvelope.ts` | `RoleCreatedEnvelope.ts` (agar kerak bo'lsa) |
 
 ### Presentation
 
@@ -179,29 +180,57 @@ export class TenantSlug extends ValueObject<TenantSlugProps> {
 }
 ```
 
-### Domain Event
+### Domain Event (minimal)
 
 ```typescript
 import { randomUUID } from 'node:crypto';
 import type { DomainEvent } from '@workspace/kernel';
 
-export class TenantCreatedEvent implements DomainEvent {
+export class RoleCreatedEvent implements DomainEvent {
   readonly eventId: string;
-  readonly eventName = 'tenant.created';
+  readonly eventName = 'access-control.role.created';
   readonly occurredAt: Date;
-  readonly aggregateType = 'Tenant';
+  readonly aggregateType = 'Role';
 
   constructor(
     readonly aggregateId: string,
-    readonly tenantId: string,
+    readonly tenantId: string | null,
     readonly name: string,
-    readonly slug: string,
+    readonly isSystem: boolean,
   ) {
     this.eventId = randomUUID();
     this.occurredAt = new Date();
   }
 }
 ```
+
+**Muhim:**
+- `eventName` — **`<module>.<aggregate>.<action>`** format
+- **`DomainEvent`** — **minimal** (5 field)
+- **Metadata** — **`EventMetadata`** orqali (outbox/bus)
+
+### Event Metadata
+
+```typescript
+import type { EventMetadata, EventEnvelope } from '@workspace/kernel';
+
+// Outbox ga yozishda
+await tx.outbox.enqueueAll(events, {
+  correlationId: req.id,
+  actorId: user.id.value,
+  tenantId: user.tenantId,
+});
+```
+
+`EventMetadata` field'lari:
+- `correlationId` — request ID
+- `causationId` — qaysi event/command keltirib chiqargan
+- `actorId` — kim amalni bajardi
+- `tenantId` — qaysi tenant
+- `recordedAt` — DB ga yozilgan vaqt
+- `aggregateVersion` — aggregate versiyasi
+- `schemaVersion` — event schema versiyasi
+- `extras` — free-form
 
 ### Command + Handler
 
