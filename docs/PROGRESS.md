@@ -260,15 +260,65 @@ Bu fayl **xronologik** tartibda **barcha** bajarilgan ishlarni saqlaydi.
 
 ---
 
+## 2026-09-19 (11-qism) -- `apps/api` Phase-0 middleware
+
+**Holat:** ✅ Tugallangan
+**Commit'lar:** `e2aa769`, `94566a3`, `4a647c2`, `6702818`
+**Fayllar:** 5 ta yangi + 3 ta yangilangan
+**Testlar:** 68/68 (49 -> 68, +19 yangi)
+
+**Xususiyatlar:**
+
+### `apps/api/src/context/`
+- `RequestContext.ts` -- `requestId` + `eventContext` interfeysi
+- `store.ts` -- `AsyncLocalStorage` + `runWithRequestContext`, `getRequestContext`, `getEventContext`, `withEventContext`
+- `index.ts` -- re-export
+
+### `apps/api/src/middleware/`
+- `request-id.ts` -- `X-Request-ID` header; validatsiya (128 belgi, `[A-Za-z0-9._-]`); UUID fallback
+- `request-context.ts` -- AsyncLocalStorage'ga `RequestContext` o'rnatish
+- `security.ts` -- helmet (strict CSP, HSTS production'da) + CORS whitelist (`CORS_ORIGINS` / `CORS_ORIGIN`)
+- `rate-limit.ts` -- global 300/min, auth 5/min, slow-down; test muhitida auth limit 10,000
+- `index.ts` -- `applyMiddleware` + `applyAuthMiddleware`
+- `middleware.ts` -> `middleware/` papkaga o'tkazildi
+
+### `apps/api/src/container/`
+- `outbox-context.ts` -- `withAmbientContext()` adapter; outbox event'lariga avtomatik `correlationId`, `actorId`, `tenantId` qo'shadi
+
+### `apps/api/`
+- `.env.test` -- test muhiti uchun `NODE_ENV=test`
+- `package.json` -- test script `--env-file=.env.test` qo'shildi
+- `server.ts` -- `applyAuthMiddleware(app)` mount (routes'dan oldin)
+
+**Yangi testlar (19 ta):**
+- `request-id.unit.test.ts` (5) -- valid, missing, over-long, unsafe, whitespace
+- `request-context.unit.test.ts` (5) -- outside/inside, correlation, merge, nested async
+- `security.unit.test.ts` (9) -- CORS whitelist, preflight, helmet headers
+
+**Muhim qarorlar:**
+- `AsyncLocalStorage` -- `apps/api` da (kernel'da emas, chunki HTTP-specific)
+- `RequestContext` -- `EventContext` ni **o'raydi** (inheritance emas, composition)
+- Test muhitida auth limit **10,000** (production 5)
+- Outbox adapter -- **faqat `access-control`** uchun hozircha; `iam` Phase-2 da
+- `trust proxy` -- 1 (Replit/nginx orqasida)
+
+**Xavfsizlik:**
+- CSP: `default-src 'none'`, `frame-ancestors 'none'`, `base-uri 'none'`
+- HSTS: 180 kun, `includeSubDomains` (faqat production)
+- CORS: whitelist (production'da bo'sh default)
+- Rate limit: IP + email (auth uchun)
+- Header injection himoyasi (`X-Request-ID`)
+
+---
 ## Umumiy statistika (2026-09-19)
 
 | Ko'rsatkich | Qiymat |
 |---|---|
 | **Tugallangan modullar** | 8 ta (`kernel`, `platform`, `contracts`, `iam`, `access-control`, `tenant`, `audit`, `notification`) |
 | **Yozilgan fayllar** | ~700 ta |
-| **Testlar** | 49/49 ✅ |
+| **Testlar** | 68/68 ✅ |
 | **Typecheck** | 39/39 ✅ |
-| **Commit'lar** | 8 ta |
+| **Commit'lar** | 13 ta |
 
 ---
 
