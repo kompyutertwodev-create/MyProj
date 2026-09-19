@@ -44,7 +44,7 @@ describe('Role', () => {
     const result = Role.create({ name, description: '', permissions });
 
     expect(result.isOk()).toBe(true);
-    const role = result.value;
+    const role = (result as any).value;
     expect(role.permissions.length).toBe(2);
     expect(role.permissions[0].name).toBe('tenant:create');
     expect(role.permissions[1].name).toBe('tenant:read');
@@ -55,7 +55,7 @@ describe('Role', () => {
     const result = Role.create({ name, description: '', permissions: [], isSystem: true });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.isSystem).toBe(true);
+    expect((result as any).value.isSystem).toBe(true);
   });
 
   it('create() accepts tenantId', () => {
@@ -63,7 +63,7 @@ describe('Role', () => {
     const result = Role.create({ name, description: '', permissions: [], tenantId: 'tenant-123' });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.tenantId).toBe('tenant-123');
+    expect((result as any).value.tenantId).toBe('tenant-123');
   });
 
   it('create() accepts custom id', () => {
@@ -72,7 +72,7 @@ describe('Role', () => {
     const result = Role.create({ name, description: '', permissions: [] }, customId);
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.id.value).toBe(customId.value);
+    expect((result as any).value.id.value).toBe(customId.value);
   });
 
   it('reconstruct() rebuilds from persistence', () => {

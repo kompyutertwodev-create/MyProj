@@ -6,14 +6,14 @@ describe('RoleName', () => {
     const result = RoleName.create('ADMIN');
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('admin');
+    expect((result as any).value.value).toBe('admin');
   });
 
   it('create() trims whitespace', () => {
     const result = RoleName.create('  admin  ');
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('admin');
+    expect((result as any).value.value).toBe('admin');
   });
 
   it('create() rejects empty string', () => {
@@ -34,35 +34,35 @@ describe('RoleName', () => {
     const result = RoleName.create(RoleName.ADMIN);
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('admin');
+    expect((result as any).value.value).toBe('admin');
   });
 
   it('create() accepts user constant', () => {
     const result = RoleName.create(RoleName.USER);
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('user');
+    expect((result as any).value.value).toBe('user');
   });
 
   it('create() accepts moderator constant', () => {
     const result = RoleName.create(RoleName.MODERATOR);
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('moderator');
+    expect((result as any).value.value).toBe('moderator');
   });
 
   it('create() accepts guest constant', () => {
     const result = RoleName.create(RoleName.GUEST);
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('guest');
+    expect((result as any).value.value).toBe('guest');
   });
 
   it('create() accepts custom names', () => {
     const result = RoleName.create('custom-role');
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.value).toBe('custom-role');
+    expect((result as any).value.value).toBe('custom-role');
   });
 
   it('toString() returns value', () => {
