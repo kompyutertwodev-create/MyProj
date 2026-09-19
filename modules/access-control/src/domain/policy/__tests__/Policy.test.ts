@@ -53,7 +53,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_NAME_TOO_LONG');
+    expect((result as any).error.code).toBe('POLICY_NAME_TOO_LONG');
   });
 
   it('create() validates description length', () => {
@@ -68,7 +68,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DESCRIPTION_TOO_LONG');
+    expect((result as any).error.code).toBe('POLICY_DESCRIPTION_TOO_LONG');
   });
 
   it('create() validates createdBy', () => {
@@ -82,7 +82,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_CREATED_BY_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_CREATED_BY_EMPTY');
   });
 
   it('create() validates subjects not empty', () => {
@@ -96,7 +96,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_SUBJECTS_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_SUBJECTS_EMPTY');
   });
 
   it('create() validates resources not empty', () => {
@@ -110,7 +110,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_RESOURCES_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_RESOURCES_EMPTY');
   });
 
   it('create() validates actions not empty', () => {
@@ -124,7 +124,7 @@ describe('Policy', () => {
     });
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_ACTIONS_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_ACTIONS_EMPTY');
   });
 
   it('create() normalizes and deduplicates lists', () => {
@@ -439,7 +439,7 @@ describe('Policy', () => {
     const result = policy.activate();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_ALREADY_ACTIVE');
+    expect((result as any).error.code).toBe('POLICY_ALREADY_ACTIVE');
   });
 
   it('activate() rejects deleted policy', () => {
@@ -457,7 +457,7 @@ describe('Policy', () => {
     const result = policy.activate();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DELETED');
+    expect((result as any).error.code).toBe('POLICY_DELETED');
   });
 
   it('deactivate() marks as inactive and emits PolicyDeactivatedEvent', () => {
@@ -495,7 +495,7 @@ describe('Policy', () => {
     const result = policy.deactivate();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_ALREADY_INACTIVE');
+    expect((result as any).error.code).toBe('POLICY_ALREADY_INACTIVE');
   });
 
   it('deactivate() rejects deleted policy', () => {
@@ -512,7 +512,7 @@ describe('Policy', () => {
     const result = policy.deactivate();
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DELETED');
+    expect((result as any).error.code).toBe('POLICY_DELETED');
   });
 
   it('delete() marks as deleted and emits PolicyDeletedEvent', () => {
@@ -552,7 +552,7 @@ describe('Policy', () => {
     const result = policy.delete('user-456');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_ALREADY_DELETED');
+    expect((result as any).error.code).toBe('POLICY_ALREADY_DELETED');
   });
 
   it('delete() rejects empty deletedBy', () => {
@@ -568,7 +568,7 @@ describe('Policy', () => {
     const result = policy.delete('');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DELETED_BY_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_DELETED_BY_EMPTY');
   });
 
   it('updateName() changes name and emits PolicyUpdatedEvent', () => {
@@ -606,7 +606,7 @@ describe('Policy', () => {
     const result = policy.updateName('New Name');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DELETED');
+    expect((result as any).error.code).toBe('POLICY_DELETED');
   });
 
   it('updateName() validates length', () => {
@@ -622,7 +622,7 @@ describe('Policy', () => {
     const result = policy.updateName('a'.repeat(201));
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_NAME_TOO_LONG');
+    expect((result as any).error.code).toBe('POLICY_NAME_TOO_LONG');
   });
 
   it('updateName() rejects unchanged name', () => {
@@ -638,7 +638,7 @@ describe('Policy', () => {
     const result = policy.updateName('Policy');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_NAME_UNCHANGED');
+    expect((result as any).error.code).toBe('POLICY_NAME_UNCHANGED');
   });
 
   it('updateDescription() changes description and emits PolicyUpdatedEvent', () => {
@@ -675,7 +675,7 @@ describe('Policy', () => {
     const result = policy.updateDescription('a'.repeat(1001));
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DESCRIPTION_TOO_LONG');
+    expect((result as any).error.code).toBe('POLICY_DESCRIPTION_TOO_LONG');
   });
 
   it('updateDescription() rejects unchanged description', () => {
@@ -692,7 +692,7 @@ describe('Policy', () => {
     const result = policy.updateDescription('Same');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_DESCRIPTION_UNCHANGED');
+    expect((result as any).error.code).toBe('POLICY_DESCRIPTION_UNCHANGED');
   });
 
   it('updateEffect() changes effect and emits PolicyUpdatedEvent', () => {
@@ -728,7 +728,7 @@ describe('Policy', () => {
     const result = policy.updateEffect(PolicyEffect.Allow);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_EFFECT_UNCHANGED');
+    expect((result as any).error.code).toBe('POLICY_EFFECT_UNCHANGED');
   });
 
   it('updateSubjects() changes subjects and emits PolicyUpdatedEvent', () => {
@@ -765,7 +765,7 @@ describe('Policy', () => {
     const result = policy.updateSubjects([]);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_SUBJECTS_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_SUBJECTS_EMPTY');
   });
 
   it('updateResources() changes resources and emits PolicyUpdatedEvent', () => {
@@ -802,7 +802,7 @@ describe('Policy', () => {
     const result = policy.updateResources([]);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_RESOURCES_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_RESOURCES_EMPTY');
   });
 
   it('updateActions() changes actions and emits PolicyUpdatedEvent', () => {
@@ -839,7 +839,7 @@ describe('Policy', () => {
     const result = policy.updateActions([]);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_ACTIONS_EMPTY');
+    expect((result as any).error.code).toBe('POLICY_ACTIONS_EMPTY');
   });
 
   it('updateConditions() changes conditions and emits PolicyUpdatedEvent', () => {
@@ -898,7 +898,7 @@ describe('Policy', () => {
     const result = policy.updatePriority(-1);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_PRIORITY_INVALID');
+    expect((result as any).error.code).toBe('POLICY_PRIORITY_INVALID');
   });
 
   it('updatePriority() rejects unchanged priority', () => {
@@ -914,6 +914,6 @@ describe('Policy', () => {
     const result = policy.updatePriority(100);
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('POLICY_PRIORITY_UNCHANGED');
+    expect((result as any).error.code).toBe('POLICY_PRIORITY_UNCHANGED');
   });
 });

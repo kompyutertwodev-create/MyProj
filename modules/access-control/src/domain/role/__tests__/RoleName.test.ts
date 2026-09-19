@@ -20,14 +20,14 @@ describe('RoleName', () => {
     const result = RoleName.create('');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_NAME_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_NAME_EMPTY');
   });
 
   it('create() rejects whitespace-only string', () => {
     const result = RoleName.create('   ');
 
     expect(result.isErr()).toBe(true);
-    expect(result.error.code).toBe('ROLE_NAME_EMPTY');
+    expect((result as any).error.code).toBe('ROLE_NAME_EMPTY');
   });
 
   it('create() accepts admin constant', () => {
