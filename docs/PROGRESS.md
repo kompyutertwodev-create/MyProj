@@ -237,6 +237,7 @@ Bu fayl **xronologik** tartibda **barcha** bajarilgan ishlarni saqlaydi.
 ## 2026-09-19 (9-qism) — `access-control` domain testlari
 
 **Holat:** ✅ Tugallangan
+**Commit:** `fa124cf`
 **Fayllar:** 6 ta test fayl
 **Testlar:** 164/164 ✅
 **Xususiyatlar:**
