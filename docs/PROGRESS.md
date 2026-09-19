@@ -443,3 +443,144 @@ Har bir modul quyidagi **faza-faza** tartibda yoziladi:
 3. **`super(id, version)`** — AggregateRoot'da `version` majburiy.
 4. **Event name formati** — `<module>.<aggregate>.<action>` (masalan, `access-control.role.created`).
 5. **Modul chegaralari** — `iam` va `access-control` bir-birini import qilmaydi.
+---
+
+## Faza 3.5 — Test runner migratsiyasi (2026-09-20)
+
+**Maqsad:** `node:test` → `vitest` — bitta test runner.
+
+### Bajarilgan ishlar
+
+- `vitest.config.ts` — `loadEnv` bilan env yuklanadi (`apps/api/.env` + `.env.test`)
+- 9 ta `apps/api/tests/*.test.ts` fayl konvertatsiya qilindi:
+  - `node:test` → `vitest` (`test`, `beforeAll`, `afterAll`)
+  - `node:assert` → `expect` (`.toBe()`, `.toEqual()`, `.toMatch()`, `.toBeTruthy()`, `.toBeNull()`, `.toBeInstanceOf()`)
+  - `assert.throws` → `expect(fn).toThrow()`
+  - `assert.rejects` → `await expect(p).rejects.toThrow()`
+- `apps/api/package.json` — `test` script: `vitest run --config ../../vitest.config.ts tests/`
+- `apps/api/package.json` — `test:watch` script qo'shildi
+
+### Natija
+
+| Tekshiruv | Natija |
+|---|---|
+| Vitest (modules + apps) | 280/280 |
+| Typecheck | 39/39 |
+| Bitta runner | Vitest |
+
+### Foyda
+
+- Bitta test runner — hamma joyda bir xil sintaksis
+- Boy assertion (`expect`) — `node:assert` dan yaxshiroq
+- Mocking (`vi.fn()`, `vi.mock()`) — enterprise daraja
+- Coverage built-in (V8)
+- Watch mode — TDD uchun
+- CI soddalashadi
+
+## Faza 3 — AuthorizationPort (kod) (2026-09-20)
+
+**Holat:** TUGALLANDI (avvalroq bajarilgan)
+
+- `AuthorizationPort` (iam) — interface
+- `AccessControlAuthorizationAdapter` (access-control) — implement
+- `LoginUserHandler` — `getRoleNames` → JWT `roles`
+- `AuthService.refreshToken` — `getRoleNames` → JWT `roles`
+- `OAuthLoginHandler` — `authorization` → JWT `roles`
+- `JsonWebTokenService` — JWT `roles` claim
+- `container.ts` (composition root) — access-control birinchi, keyin iam
+- Re-mount access-control with real authGuard
+
+## Faza 3.6 — Authorization testlar (2026-09-20)
+
+**Holat:** TUGALLANDI
+
+### Yangi test fayllari (3 ta, 20 ta test)
+
+| # | Fayl | Testlar |
+|---|---|---|
+| 1 | `modules/access-control/src/application/adapters/__tests__/AccessControlAuthorizationAdapter.test.ts` | 9 |
+| 2 | `modules/iam/src/application/commands/login-user/__tests__/LoginUserHandler.test.ts` | 7 |
+| 3 | `apps/api/tests/authorization.integration.test.ts` | 4 |
+
+### Qoplangan holatlar
+
+**Adapter (`getRoleNames`):**
+- Active items → role names
+- Inactive items → filtrlanadi
+- Duplicate role names → dedupe (`Set`)
+- Bo'sh items → `[]`
+- Handler error → `[]` (deny-by-default)
+
+**Adapter (`checkPermission`):**
+- `allowed: true/false` + reason
+- Handler error → `{ allowed: false, reason: 'evaluation_error' }`
+- Resource + environment attributes forward
+
+**LoginUserHandler:**
+- `authorization` yo'q → JWT `roles: []`
+- `getRoleNames` → userId bilan chaqiriladi
+- `roleNames` → JWT ga uzatiladi
+- Result `user.roles` — `roleNames` bilan bir xil
+- Deny-by-default: `getRoleNames` xato → JWT `roles: []`
+- Invalid credentials → `getRoleNames` chaqirilmaydi
+
+**Integration (end-to-end):**
+- Register → Login → JWT `roles: []`
+- Refresh → `roles: []` saqlanadi
+- Role assign → Login → JWT `roles: ['user']`
+- User DTO `roles` — JWT `roles` bilan bir xil
+
+### Natija
+
+| Tekshiruv | Natija |
+|---|---|
+| Vitest | 300/300 |
+| Typecheck | 39/39 |
+| Test files | 24/24 |
+
+**Yangi commitlar:**
+- `40e8301` test(authorization): fix assignedBy field type in integration tests
+- `3b9fa8b` test(authorization): add AuthorizationPort integration and unit tests
+
+## Faza 4 — Data migration — KERAK EMAS (2026-09-20)
+
+**Xulosa:** Data migration kerak emas.
+
+**Sabab:**
+
+- Real foydalanuvchi / real data yo'q
+- Eski `iam` sxemasi (iam_roles, iam_permissions, iam_role_permissions, iam_identity_roles, iam_policies) DB da yo'q
+- `0001_iam_v2_schema.sql` allaqachon ishlagan:
+  - Eski jadvallarni DROP qilgan
+  - Yangi jadvallarni CREATE qilgan
+- DB da `identities` jadvalida 4 ta qator — integration testlardan qolgan (test email lar)
+
+**DB holati (2026-09-20):**
+
+| Jadval | Qatorlar |
+|---|---|
+| identities | 4 (test data) |
+| iam_sessions | 4 |
+| iam_devices | 0 |
+| iam_oauth_states | 0 |
+| iam_outbox_events | 8 |
+| social_identities | 0 |
+| ac_roles | 4 |
+| ac_role_permissions | 13 |
+| ac_role_assignments | 6 |
+| ac_policies | 0 |
+| ac_outbox_events | 10 |
+| tenant_tenants | 0 |
+| tenant_members | 0 |
+
+## Faza 5 — Boshqa modullar — KEYINGI
+
+**Rejaga ko'ra:**
+
+- `billing` — to'lov, invoice, subscription
+- `subscription` — rejalar, tariflar
+- `catalog` — mahsulot, kategoriya
+- `media` — fayl saqlash
+- `search` — qidiruv
+- `analytics` — statistika
+- `reports` — hisobotlar
