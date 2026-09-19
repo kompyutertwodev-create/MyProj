@@ -79,7 +79,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.roleName).toBe('admin');
+    expect((result as any).value.roleName).toBe('admin');
   });
 
   it('create() validates assignedBy', () => {
@@ -119,7 +119,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.expiresAt?.toISOString()).toBe('2030-01-01T00:00:00.000Z');
+    expect((result as any).value.expiresAt?.toISOString()).toBe('2030-01-01T00:00:00.000Z');
   });
 
   it('create() accepts tenantId', () => {
@@ -132,7 +132,7 @@ describe('RoleAssignment', () => {
     });
 
     expect(result.isOk()).toBe(true);
-    expect(result.value.tenantId).toBe('tenant-123');
+    expect((result as any).value.tenantId).toBe('tenant-123');
   });
 
   it('reconstruct() rebuilds from persistence', () => {
@@ -181,8 +181,8 @@ describe('RoleAssignment', () => {
     const events = assignment.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role-assignment.revoked');
-    expect(events[0].revokedBy).toBe('user-999');
-    expect(events[0].reason).toBe('User left the company');
+    expect((events[0] as any).revokedBy).toBe('user-999');
+    expect((events[0] as any).reason).toBe('User left the company');
   });
 
   it('revoke() rejects already revoked', () => {

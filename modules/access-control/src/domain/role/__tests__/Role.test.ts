@@ -117,7 +117,7 @@ describe('Role', () => {
     const events = role.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role.updated');
-    expect(events[0].name).toBe('superadmin');
+    expect((events[0] as any).name).toBe('superadmin');
   });
 
   it('rename() rejects system role', () => {
@@ -191,7 +191,7 @@ describe('Role', () => {
     const events = role.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role.permission-added');
-    expect(events[0].permissionName).toBe('tenant:create');
+    expect((events[0] as any).permissionName).toBe('tenant:create');
   });
 
   it('addPermission() rejects system role', () => {
@@ -230,7 +230,7 @@ describe('Role', () => {
     const events = role.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role.permission-removed');
-    expect(events[0].permissionName).toBe('tenant:create');
+    expect((events[0] as any).permissionName).toBe('tenant:create');
   });
 
   it('removePermission() rejects system role', () => {
@@ -300,7 +300,7 @@ describe('Role', () => {
     const events = role.pullDomainEvents();
     expect(events.length).toBe(1);
     expect(events[0].eventName).toBe('access-control.role.deleted');
-    expect(events[0].deletedBy).toBe('user-123');
+    expect((events[0] as any).deletedBy).toBe('user-123');
   });
 
   it('delete() rejects system role', () => {
