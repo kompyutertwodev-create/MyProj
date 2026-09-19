@@ -13,7 +13,7 @@ import type { AccessControlContainer } from './access-control-container.js';
 /**
  * Build the IAM HTTP surface.
  *
- * RBAC endpoints are NOT mounted here вЂ” they live under
+ * RBAC endpoints are NOT mounted here — they live under
  * /api/v1/access-control and are provided by
  * {@link createAccessControlRouterFromContainer}. This router owns auth,
  * users and OAuth only.

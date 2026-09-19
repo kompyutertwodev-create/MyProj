@@ -85,7 +85,7 @@ export interface AccessControlContainerOptions {
  *
  * Note on the outbox: the module owns its own `ac_outbox_events` table and
  * writes to it inside each handler's transaction. A dispatcher that drains
- * this table is intentionally *not* started here вЂ” the platform owns the
+ * this table is intentionally *not* started here — the platform owns the
  * runtime concern of publishing. When the platform ships an abstraction
  * that accepts any `OutboxPort`, wire it up here.
  */

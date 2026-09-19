@@ -7,6 +7,7 @@ import type { LogoutUserHandler } from '../commands/logout-user/LogoutUserHandle
 import type { SessionRepository } from '../../domain/repositories/SessionRepository.js';
 import type { UserRepository } from '../../domain/repositories/UserRepository.js';
 import type { DomainTokenService } from '../../domain/domain-services/TokenService.js';
+import type { AuthorizationPort } from '../ports/AuthorizationPort.js';
 import type { ApplicationError } from '../ports/ApplicationError.js';
 import { UnauthorizedApplicationError } from '../ports/ApplicationError.js';
 
@@ -20,9 +21,10 @@ export interface RefreshTokenResult {
 /**
  * Authentication facade for HTTP, GraphQL and gRPC adapters.
  *
- * Refresh tokens are addressed by their SHA-256 hash. Access tokens carry
- * no role claims yet: RBAC is owned by access-control and reached through
- * the AuthorizationPort, which the composition root wires in a later phase.
+ * Refresh tokens are addressed by their SHA-256 hash. Role claims for
+ * access tokens come from {@link AuthorizationPort}, which the composition
+ * root wires to @workspace/access-control. When the port is absent the
+ * token is issued with no role claims (deny-by-default).
  */
 export class AuthService {
   constructor(
@@ -31,6 +33,7 @@ export class AuthService {
     private readonly sessions: SessionRepository,
     private readonly users: UserRepository,
     private readonly tokens: DomainTokenService,
+    private readonly authorization?: AuthorizationPort,
   ) {}
 
   login(command: LoginUserCommand): Promise<Result<LoginUserResult, ApplicationError>> {
@@ -66,8 +69,9 @@ export class AuthService {
       return err(new UnauthorizedApplicationError('User account is not active'));
     }
 
-    // Role claims are supplied by the AuthorizationPort in a later phase.
-    const roleNames: string[] = [];
+    const roleNames = this.authorization
+      ? await this.authorization.getRoleNames(user.id.value)
+      : [];
     const accessToken = await this.tokens.generateAccessToken(user.id.value, roleNames);
     const nextRefreshToken = await this.tokens.generateRefreshToken(
       user.id.value,

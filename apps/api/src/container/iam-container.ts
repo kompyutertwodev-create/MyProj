@@ -24,6 +24,7 @@ import {
   ListUsersHandler,
   SuspendUserHandler,
   InitiateOAuthHandler,
+  type AuthorizationPort,
 } from '@workspace/iam';
 import {
   createPlatformEventBus,
@@ -39,7 +40,7 @@ import { dirname, join } from 'node:path';
 /**
  * Composition root for the IAM module.
  *
- * Owns identity data only РІР‚вЂќ sessions, users, OAuth. RBAC (roles,
+ * Owns identity data only — sessions, users, OAuth. RBAC (roles,
  * permissions, ABAC policies) lives in @workspace/access-control and is
  * wired in a separate container (see access-control-container.ts).
  */
@@ -72,6 +73,7 @@ export interface IamContainer {
 
 export interface IamContainerOptions {
   database: PostgresDatabase;
+  authorization?: AuthorizationPort;
   startBackgroundWorkers?: boolean;
   runMigrations?: boolean;
 }
@@ -158,6 +160,7 @@ export async function createIamContainer(options: IamContainerOptions): Promise<
     tokenService,
     events,
     unitOfWork,
+    options.authorization,
   );
   const logoutUser = new LogoutUserHandler(sessions, events);
   const changePassword = new ChangePasswordHandler(users, passwordService, events);
@@ -177,11 +180,19 @@ export async function createIamContainer(options: IamContainerOptions): Promise<
     passwordService,
     unitOfWork,
     events,
+    options.authorization,
   );
   const linkSocialAccount = new LinkSocialAccountHandler(providerRegistry, socialIdentities);
   const initiateOAuth = new InitiateOAuthHandler(providerRegistry, oauthStates);
 
-  const authService = new AuthService(loginUser, logoutUser, sessions, users, tokenService);
+  const authService = new AuthService(
+    loginUser,
+    logoutUser,
+    sessions,
+    users,
+    tokenService,
+    options.authorization,
+  );
 
   const getUser = new GetUserHandler(users);
   const getUserByEmail = new GetUserByEmailHandler(users);

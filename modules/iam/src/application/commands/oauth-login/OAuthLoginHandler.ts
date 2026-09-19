@@ -7,6 +7,7 @@ import type { UserRepository } from '../../../domain/repositories/UserRepository
 import type { SessionRepository } from '../../../domain/repositories/SessionRepository.js';
 import type { DomainTokenService as TokenService } from '../../../domain/domain-services/TokenService.js';
 import type { PasswordService } from '../../../domain/domain-services/PasswordService.js';
+import type { AuthorizationPort } from '../../ports/AuthorizationPort.js';
 import { SocialIdentity } from '../../../domain/oauth/SocialIdentity.js';
 import { User } from '../../../domain/User.js';
 import { Email } from '../../../domain/Email.js';
@@ -26,11 +27,9 @@ const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 /**
  * OAuth login / sign-up handler.
  *
- * RBAC is not consulted here: role assignment for newly created users is
- * delegated to @workspace/access-control (through an event handler that
- * reacts to UserRegisteredEvent). The access token is minted with an empty
- * role list for now вЂ” deny-by-default until the AuthorizationPort wiring
- * lands.
+ * Role claims come from {@link AuthorizationPort} (wired by the
+ * composition root to @workspace/access-control). When the port is absent
+ * the token carries no role claims.
  */
 export class OAuthLoginHandler {
   constructor(
@@ -42,6 +41,7 @@ export class OAuthLoginHandler {
     private readonly passwordService: PasswordService,
     private readonly unitOfWork?: IamUnitOfWork,
     private readonly eventBus?: EventBusPort,
+    private readonly authorization?: AuthorizationPort,
   ) {}
 
   async handle(command: OAuthLoginCommand): Promise<OAuthLoginResult> {
@@ -141,8 +141,9 @@ export class OAuthLoginHandler {
       await context.socialIdentities.save(socialIdentity);
     }
 
-    // RBAC lives in access-control; tokens carry no role claims yet.
-    const roleNames: string[] = [];
+    const roleNames = this.authorization
+      ? await this.authorization.getRoleNames(user.id.value)
+      : [];
     const accessToken = await this.tokenService.generateAccessToken(
       user.id.value,
       roleNames,

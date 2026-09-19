@@ -18,7 +18,7 @@ export interface DeactivatePolicyResult {
 /**
  * Deactivate a Policy so the evaluator stops applying it.
  *
- * Deactivation does not delete the policy Р Р†Р вЂљРІР‚Сњ it can be re-activated later
+ * Deactivation does not delete the policy — it can be re-activated later
  * with {@link ActivatePolicyHandler}.
  */
 export class DeactivatePolicyHandler {

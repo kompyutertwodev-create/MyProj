@@ -6,6 +6,7 @@ import {
   SendgridEmailService,
 } from '@workspace/platform';
 import { PlatformEmailSender } from '@workspace/notification';
+import { createAuthGuard } from '@workspace/iam';
 import {
   createIamContainer,
   createIamRouterFromContainer,
@@ -20,7 +21,7 @@ import {
   type IamContainerOptions,
 } from './container/index.js';
 import { ApiContactResolver } from './container/contact-resolver.js';
-import { createAuthGuard } from '@workspace/iam';
+import { AccessControlAuthorizationAdapter } from '@workspace/access-control';
 
 export interface AppContainer {
   logger: Logger;
@@ -37,22 +38,54 @@ export interface AppContainer {
   accessControlContainer: Awaited<ReturnType<typeof createAccessControlContainer>>;
 }
 
-export interface ContainerOptions extends Omit<IamContainerOptions, 'database'> {
+export interface ContainerOptions extends Omit<IamContainerOptions, 'database' | 'authorization'> {
   databaseUrl: string;
   sendgridApiKey?: string;
   emailFrom?: string;
   telegramBotToken?: string;
 }
 
+/**
+ * Composition root.
+ *
+ * Order matters: access-control is created first so its authorization
+ * adapter can be injected into the IAM container before IAM handlers are
+ * constructed. This is the only place that knows about both modules —
+ * neither imports the other directly.
+ */
 export async function createContainer(options: ContainerOptions): Promise<AppContainer> {
   const logger = createLogger('api');
   const database = createPostgresDatabase(options.databaseUrl);
 
+  // 1. Access-control first — it owns RBAC + ABAC.
+  const accessControlContainer = await createAccessControlContainer({ database });
+  const accessControlRouter = createAccessControlRouterFromContainer(
+    accessControlContainer,
+    // The auth guard is created after the iam container below, so we
+    // declare the route builder here but wire the guard lazily.
+    async (_req, _res, next) => { next(); },
+  );
+
+  // 2. AuthorizationPort adapter — iam's view of access-control.
+  const authorization = new AccessControlAuthorizationAdapter(
+    accessControlContainer.checkPermission,
+    accessControlContainer.listUserRoles,
+  );
+
+  // 3. IAM — auth + users + oauth, with the adapter injected.
   const iamContainer = await createIamContainer({
     ...options,
     database,
+    authorization,
   });
   const iamRouter = createIamRouterFromContainer(iamContainer);
+
+  // 4. Re-mount access-control with the real auth guard now that iam
+  //    has issued its token service.
+  const accessControlRouterWithGuard = createAccessControlRouterFromContainer(
+    accessControlContainer,
+    createAuthGuard(iamContainer.tokenService),
+  );
 
   const tenantContainer = await createTenantContainer({
     database,
@@ -60,7 +93,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
   });
   const tenantRouter = createTenantRouterFromContainer(
     tenantContainer,
-    createAuthGuard(iamContainer.tokenService)
+    createAuthGuard(iamContainer.tokenService),
   );
 
   const auditContainer = createAuditContainer({
@@ -69,7 +102,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
   });
   const auditRouter = createAuditRouterFromContainer(
     auditContainer,
-    createAuthGuard(iamContainer.tokenService)
+    createAuthGuard(iamContainer.tokenService),
   );
 
   // Optional email sender
@@ -114,16 +147,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
   });
   const notificationRouter = createNotificationRouterFromContainer(
     notificationContainer,
-    createAuthGuard(iamContainer.tokenService)
-  );
-
-  // Access-control вЂ” self-contained RBAC + ABAC module.
-  const accessControlContainer = await createAccessControlContainer({
-    database,
-  });
-  const accessControlRouter = createAccessControlRouterFromContainer(
-    accessControlContainer,
-    createAuthGuard(iamContainer.tokenService)
+    createAuthGuard(iamContainer.tokenService),
   );
 
   return {
@@ -137,7 +161,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     auditContainer,
     notificationRouter,
     notificationContainer,
-    accessControlRouter,
+    accessControlRouter: accessControlRouterWithGuard,
     accessControlContainer,
   };
 }

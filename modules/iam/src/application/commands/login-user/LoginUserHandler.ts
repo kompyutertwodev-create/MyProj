@@ -15,6 +15,7 @@ import {
   ValidationApplicationError,
 } from '../../ports/ApplicationError.js';
 import type { EventBusPort } from '../../ports/EventBusPort.js';
+import type { AuthorizationPort } from '../../ports/AuthorizationPort.js';
 import type { IamTransactionContext, IamUnitOfWork } from '../../ports/IamUnitOfWork.js';
 
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -22,10 +23,10 @@ const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 /**
  * Authenticate a user by email + password and mint a session.
  *
- * The access token is issued with an *empty* role list for now: roles are
- * resolved through the AuthorizationPort and injected by the composition
- * root in a later phase. Until then the JWT carries no role claims, which
- * is safe (deny-by-default) and keeps this handler decoupled from RBAC.
+ * Role claims for the access token come from {@link AuthorizationPort},
+ * which is supplied by the composition root and delegates to
+ * @workspace/access-control. When no port is configured (tests, early
+ * boots) the token is issued with an empty role list вЂ” deny-by-default.
  */
 export class LoginUserHandler {
   constructor(
@@ -35,6 +36,7 @@ export class LoginUserHandler {
     private readonly tokenService: DomainTokenService,
     private readonly eventBus: EventBusPort,
     private readonly unitOfWork?: IamUnitOfWork,
+    private readonly authorization?: AuthorizationPort,
   ) {}
 
   async execute(
@@ -52,7 +54,7 @@ export class LoginUserHandler {
             sessions: this.sessionRepository,
             socialIdentities: undefined as never,
             outbox: undefined as never,
-          } as IamTransactionContext,
+          },
           events,
         );
 
@@ -90,9 +92,10 @@ export class LoginUserHandler {
       return err(new UnauthorizedApplicationError(`Account is ${user.status}`));
     }
 
-    // RBAC lives in access-control; until the AuthorizationPort is wired
-    // through, the access token carries no role claims.
-    const roleNames: string[] = [];
+    // Resolve role claims through the authorization port when available.
+    const roleNames = this.authorization
+      ? await this.authorization.getRoleNames(user.id.value)
+      : [];
     const accessToken = await this.tokenService.generateAccessToken(
       user.id.value,
       roleNames,
