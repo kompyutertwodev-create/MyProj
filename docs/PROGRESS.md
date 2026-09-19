@@ -310,15 +310,62 @@ Bu fayl **xronologik** tartibda **barcha** bajarilgan ishlarni saqlaydi.
 - Header injection himoyasi (`X-Request-ID`)
 
 ---
+## 2026-09-19 (12-qism) -- `iam` OutboxPort + Faza 1 testlari
+
+**Holat:** ✅ Tugallangan
+**Commit'lar:** `93606a9`, `2934817`, `8010332`, `5bf3a07`, `168cdd2`
+**Fayllar:** 15 ta o'zgargan
+**Testlar:** 280/280 (68 apps/api + 212 access-control)
+
+**Xususiyatlar:**
+
+### `@workspace/kernel`
+- `withAmbientContext.ts` -- **Proxy-based** helper; enqueue/enqueueAll/publish/publishAll metodlarini ambient `EventContext` bilan o'raydi; qolgan metodlarni (subscribe, claimBatch, ...) saqlaydi
+- `index.ts` -- `withAmbientContext`, `AmbientContextProvider`, `ContextAwareTarget` export
+
+### `@workspace/platform`
+- `OutboxStore` -- `enqueue(event, context?)`, `enqueueAll(events, context?)` (optional EventContext)
+- `OutboxEventBus` -- `publish(event, context?)`, `publishAll(events, context?)` (optional EventContext)
+
+### `@workspace/iam`
+- `DrizzleOutboxRepository` -- `context` qabul qiladi; metadata column'larga (`correlationId`, `causationId`, `actorId`, `tenantId`, `schemaVersion`, `aggregateVersion`, `metadata`) yozadi
+- `claimBatch` tuzatildi -- `tx.update().set()` + parameterized `IN` clause
+
+### `apps/api`
+- `iam-container.ts` -- `OutboxEventBus` `withAmbientContext` bilan o'ralgan
+- `getEventContext()` -- `@workspace/kernel` dan `withAmbientContext` ga provider sifatida uzatiladi
+
+### `modules/access-control`
+- `tsconfig.json` -- `exclude` dan `__tests__` olib tashlandi (testlar endi typecheck qilinadi)
+- **Handler** testlari (6 fayl) -- import path tuzatildi (`../../` -> `../../../`)
+- `Permission.test.ts` -- `getOrThrow()` + `isErr()` type narrowing
+- `Policy.test.ts` -- `getOrThrow()` + `isErr()` type narrowing
+
+### Root
+- `vitest.config.ts` -- yangi config; faqat `modules/**/src/**/__tests__/**/*.test.ts` ni oladi; `apps/**` ni chiqarib tashlaydi
+
+**Muhim qarorlar:**
+- **`withAmbientContext`** -- `kernel` da, **Proxy** pattern (barcha metodlar saqlanadi)
+- **Provider** -- `getContext` **parametr** sifatida (kernel `AsyncLocalStorage` ni bilmaydi)
+- **`OutboxStore`** va **`OutboxEventBus`** -- **context?** optional (backward-compatible)
+- **Testlar** -- 2 xil runner: `apps/api` (`node:test`) + `modules` (`vitest`)
+- **`exclude`** -- `access-control` da **olib tashlandi** (testlar to'g'ri)
+
+**Testlar:**
+- `apps/api/tests/` -- 68 (node:test)
+- `modules/access-control/src/**/__tests__/` -- 212 (vitest)
+- **Jami:** 280/280 ✅
+
+---
 ## Umumiy statistika (2026-09-19)
 
 | Ko'rsatkich | Qiymat |
 |---|---|
 | **Tugallangan modullar** | 8 ta (`kernel`, `platform`, `contracts`, `iam`, `access-control`, `tenant`, `audit`, `notification`) |
 | **Yozilgan fayllar** | ~700 ta |
-| **Testlar** | 68/68 ✅ |
+| **Testlar** | 280/280 ✅ |
 | **Typecheck** | 39/39 ✅ |
-| **Commit'lar** | 13 ta |
+| **Commit'lar** | 18 ta |
 
 ---
 

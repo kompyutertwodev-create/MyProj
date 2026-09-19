@@ -33,27 +33,28 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 - **Til:** TypeScript 5.9
 - **Monorepo:** pnpm workspace
 - **DB:** PostgreSQL (Supabase pooler)
-- **Test:** `node:test` (68/68 ✅)
+- **Test:** `node:test` (apps/api, 68/68) + `vitest` (modules, 212/212) -- **jami 280/280** ✅
 - **Typecheck:** 39/39 workspace ✅
 
 ## Hozirgi holat (2026-09-19)
 
 ### Tugallangan modullar ✅
 
-- `@workspace/kernel` -- DDD + EventMetadata, EventEnvelope, EventContext, sha256Hex
-- `@workspace/platform` -- Logger, PostgreSQL, email, messaging, cache, migrations
+- `@workspace/kernel` -- DDD + EventMetadata, EventEnvelope, EventContext, sha256Hex, **withAmbientContext**
+- `@workspace/platform` -- Logger, PostgreSQL, email, messaging (**OutboxStore + context?**), cache, migrations
 - `@workspace/contracts` -- Umumiy tiplar
-- `@workspace/iam` -- Auth + Users + OAuth (RBAC olib tashlangan)
+- `@workspace/iam` -- Auth + Users + OAuth (RBAC olib tashlangan); outbox **context** qabul qiladi
 - `@workspace/access-control` -- RBAC + ABAC (to'liq DDD stack)
 - `@workspace/tenant` -- Multi-tenancy
 - `@workspace/audit` -- Event-driven audit log
 - `@workspace/notification` -- Email + Telegram (enterprise)
 
-### `apps/api` -- Phase-0 **tugallandi** ✅
+### `apps/api` -- Phase-0 + Phase-2 **tugallandi** ✅
 
 - `context/` -- RequestContext + AsyncLocalStorage
 - `middleware/` -- request-id, request-context, security, rate-limit
-- `container/outbox-context.ts` -- withAmbientContext adapter
+- `container/outbox-context.ts` -- withAmbientContext adapter (access-control uchun)
+- `container/iam-container.ts` -- withAmbientContext (iam uchun)
 - `server.ts` -- applyAuthMiddleware mount
 - **68/68 test**, typecheck ✅
 
@@ -66,13 +67,15 @@ Siz **senior DDD architect + TypeScript developer** sifatida **Identity Platform
 
 ### Oxirgi commitlar
 ```
+5bf3a07 test(vitest): exclude apps/api tests that use node:test
+8010332 test(access-control): fix Permission.test.ts type errors
+2934817 test(access-control): fix Policy.test.ts type errors
+93606a9 feat(iam): propagate ambient correlationId to iam outbox
+cf15aca docs(handoff): rewrite HANDOFF.md for Phase-0 completion
 cbceed2 docs: update PROGRESS and HANDOFF with Phase-0 completion
 6702818 feat(api): inject ambient correlationId into access-control outbox
 4a647c2 test(api): add middleware unit tests (request-id, request-context, security)
 94566a3 feat(api): wire auth rate limit and test env override
-a7a3ad6 chore(api): remove middleware.ts backup after Phase-0 refactor
-6bff6b9 test(access-control): add AssignRoleHandler unit tests
-e2aa769 feat(api): add Phase-0 middleware (request-id, request-context, security, rate-limit)
 ```
 
 ## Arxitektura tamoyillari
@@ -136,56 +139,56 @@ Batafsil: `docs/CONVENTIONS.md`
 - `getEventContext()` -- faqat EventContext
 - `withEventContext(override)` -- merge
 
-### `withAmbientContext(outbox)`
+### `withAmbientContext(outbox, getContext)`
+- **Proxy-based** helper (kernel)
 - Outbox event'lariga `correlationId` avtomatik qo'shadi
 - Caller-supplied context **ustun** (field-by-field)
+- `enqueue`/`enqueueAll`/`publish`/`publishAll` **o'raladi**; qolgan metodlar **saqlanadi**
 
 ## Testlar
 
-**`apps/api/tests/`:**
+**`apps/api/tests/` (node:test, 68/68):**
 - `audit.unit.test.ts` (12)
 - `auth.integration.test.ts` (3)
 - `notification.unit.test.ts` (13)
 - `oauth.security.test.ts` (6)
 - `outbox.test.ts` (3)
-- `request-id.unit.test.ts` (5) -- **YANGI**
-- `request-context.unit.test.ts` (5) -- **YANGI**
-- `security.unit.test.ts` (9) -- **YANGI**
+- `request-id.unit.test.ts` (5)
+- `request-context.unit.test.ts` (5)
+- `security.unit.test.ts` (9)
 - `tenant.unit.test.ts` (12)
-- **Jami: 68/68 ✅**
+
+**`modules/access-control/src/**/__tests__/` (vitest, 212/212):**
+- Domain: `Role.test.ts`, `RoleName.test.ts`, `Permission.test.ts`, `Policy.test.ts`, `AttributeCondition.test.ts`, `RoleAssignment.test.ts`
+- Application: `CreateRoleHandler.test.ts`, `UpdateRoleHandler.test.ts`, `DeleteRoleHandler.test.ts`, `AddPermissionToRoleHandler.test.ts`, `RemovePermissionFromRoleHandler.test.ts`, `AssignRoleHandler.test.ts`
+
+**Jami: 280/280 ✅**
 
 **Test muhiti:**
 - `apps/api/.env.test` -- `NODE_ENV=test`, `SKIP_AUTH_RATE_LIMIT=1`
-- `package.json` -- `tsx --env-file=.env --env-file=.env.test --test`
+- `vitest.config.ts` -- faqat `modules/**/src/**/__tests__/**/*.test.ts`
+- `apps/api` -- `node:test` (o'z testlari)
 
 ## Keyingi rejalar
 
-### Faza 1 -- `access-control` application testlari (davom)
-- Qolgan: `RevokeRoleHandler`, `CreatePolicyHandler`, `UpdatePolicyHandler`, `DeletePolicyHandler`, `ActivatePolicyHandler`, `DeactivatePolicyHandler`
-- Queries: `GetRoleHandler`, `ListRolesHandler`, ...
-- Integration testlar: `/api/v1/access-control/*`
+### Faza 2 -- `iam` OutboxPort -> EventContext ✅ TUGALLANDI
 
-### Faza 2 -- `iam` OutboxPort -> EventContext
-- `iam/OutboxPort` ni `access-control` bilan bir xil qilish
-- `DrizzleIamOutboxRepository` -- context column'lar
-- `iam` handlers -- `context` uzatish
-- `iam-container.ts` -- `withAmbientContext` qo'llash
+### Faza 3 -- `AuthorizationPort` to'liq wire
+- `iam`dan JWT **role claim** lar (`roles: string[]`)
+- `LoginUserHandler` -- `access-control` dan `roleNames` olib, JWT ga qo'shish
+- RBAC **end-to-end**
 
-### Faza 3 -- Documentation yangilash
-- `docs/PROGRESS.md`, `docs/architecture.md`
-
-### Faza 4 -- `AuthorizationPort` to'liq wire
-- `iam`dan `roleNames` -- `access-control`dan
-- JWT **role claim**lar to'ldirilishi
-
-### Faza 5 -- Data migration
+### Faza 4 -- Data migration
 - Eski `identities`dan yangi jadvalga (`iam_v2`)
 
-### Faza 6 -- Boshqa modullar
+### Faza 5 -- Boshqa modullar
 - `billing`, `subscription`, `catalog`, `media`, `search`, `analytics`, `reports`
 
-### Faza 7 -- Frontend
+### Faza 6 -- Frontend
 - `apps/web`, `apps/admin`, `apps/mobile`, `apps/telegram`
+
+### Faza 7 -- CI/CD
+- GitHub Actions: typecheck + test
 
 ## Muhim eslatmalar
 
@@ -196,6 +199,9 @@ Batafsil: `docs/CONVENTIONS.md`
 5. **DomainEvent** -- `eventName` formati: `<module>.<aggregate>.<action>`
 6. **`super(id, version)`** -- AggregateRoot'da `version` **majburiy**
 7. **InMemoryRepository** -- testlar uchun **muhim**, har doim yozilsin
+8. **Test runners** -- `apps/api` (`node:test`) + `modules` (`vitest`); kelajakda birlashtirilishi mumkin
+9. **Import path** -- `__tests__/` papkasidan `../../../` (3 ta `..`) + `../../../../` (4 ta `..`)
+10. **Vitest** -- **CJS deprecation** warning (zararsiz); kelajakda `vitest.config.mts` ga o'tkazish mumkin
 
 ## Birinchi vazifa
 
@@ -216,7 +222,7 @@ Batafsil: `docs/CONVENTIONS.md`
    - Qanday ishlashimizni tushundingizmi?
    - Keyingi qadam nima bo'lishi kerak?
 
-**Javobingizdan keyin** biz **Faza 2** (`iam` OutboxPort) yoki **Faza 1** davomini boshlaymiz.
+**Javobingizdan keyin** biz **Faza 3** (`AuthorizationPort`) yoki **Faza 4** (data migration) ni boshlaymiz.
 
 ---
 
