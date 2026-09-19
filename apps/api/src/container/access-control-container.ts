@@ -35,6 +35,7 @@ import {
   type PostgresDatabase,
   runSqlMigrations,
 } from '@workspace/platform';
+import { withAmbientContext } from './outbox-context.js';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -109,7 +110,7 @@ export async function createAccessControlContainer(
   const roles = new DrizzleRoleRepository(db);
   const policies = new DrizzlePolicyRepository(db);
   const roleAssignments = new DrizzleRoleAssignmentRepository(db);
-  const outbox = new DrizzleOutboxRepository(db);
+  const outbox = withAmbientContext(new DrizzleOutboxRepository(db));
   const unitOfWork = new DrizzleAccessControlUnitOfWork(db);
 
   // 3. Seed (idempotent)
