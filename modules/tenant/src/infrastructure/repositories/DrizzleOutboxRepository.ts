@@ -28,12 +28,12 @@ interface ClaimedRow {
  * Drizzle-backed outbox repository.
  *
  * Implements both:
- *   - `OutboxPort`    вЂ” the module's write-side contract (handlers depend on this)
- *   - `OutboxStore`   вЂ” the platform's dispatcher contract (claimBatch / mark*)
+ *   - `OutboxPort`  вЂ” the module's write-side contract (handlers depend on this)
+ *   - `OutboxStore` вЂ” the platform's dispatcher contract (claimBatch / mark*)
  *
- * Because the same row shape must serve both, the `context` parameter is
- * optional: handlers that thread metadata through use it; the ambient
- * `withAmbientContext` proxy injects it automatically when omitted.
+ * The `context` parameter is optional: handlers that thread metadata
+ * through use it; the ambient `withAmbientContext` proxy injects it
+ * automatically when omitted.
  */
 export class DrizzleOutboxRepository implements OutboxPort, OutboxStore {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,8 +95,8 @@ export class DrizzleOutboxRepository implements OutboxPort, OutboxStore {
         .where(
           or(
             and(eq(outboxEvents.status, 'pending'), lte(outboxEvents.availableAt, new Date())),
-            and(eq(outboxEvents.status, 'processing'), lte(outboxEvents.lockedAt, staleBefore))
-          )
+            and(eq(outboxEvents.status, 'processing'), lte(outboxEvents.lockedAt, staleBefore)),
+          ),
         )
         .orderBy(outboxEvents.createdAt)
         .limit(limit)

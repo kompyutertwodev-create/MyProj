@@ -1,4 +1,4 @@
-﻿import { AggregateRoot, DomainError, Result, err, ok } from '@workspace/kernel';
+import { AggregateRoot, DomainError, Result, err, ok } from '@workspace/kernel';
 import { TenantId } from './TenantId.js';
 import { TenantName } from './TenantName.js';
 import { TenantSlug } from './TenantSlug.js';
@@ -9,6 +9,7 @@ import { MemberRole } from './MemberRole.js';
 import { TenantCreatedEvent } from './events/TenantCreatedEvent.js';
 import { TenantUpdatedEvent } from './events/TenantUpdatedEvent.js';
 import { TenantSuspendedEvent } from './events/TenantSuspendedEvent.js';
+import { TenantDeletedEvent } from './events/TenantDeletedEvent.js';
 import { MemberAddedEvent } from './events/MemberAddedEvent.js';
 
 export interface TenantCreateProps {
@@ -26,8 +27,10 @@ export interface TenantReconstructProps {
   settings: TenantSettings;
   members: Member[];
   ownerUserId: string;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  version: number;
 }
 
 /**
@@ -43,6 +46,7 @@ export class Tenant extends AggregateRoot<TenantId> {
   private _settings: TenantSettings;
   private _members: Member[];
   private _ownerUserId: string;
+  private _deletedAt: Date | null;
   private _createdAt: Date;
   private _updatedAt: Date;
 
@@ -54,53 +58,35 @@ export class Tenant extends AggregateRoot<TenantId> {
     settings: TenantSettings,
     members: Member[],
     ownerUserId: string,
+    deletedAt: Date | null,
     createdAt: Date,
-    updatedAt: Date
+    updatedAt: Date,
+    version: number,
   ) {
-    super(id);
+    super(id, version);
     this._name = name;
     this._slug = slug;
     this._status = status;
     this._settings = settings;
     this._members = [...members];
     this._ownerUserId = ownerUserId;
+    this._deletedAt = deletedAt;
     this._createdAt = createdAt;
     this._updatedAt = updatedAt;
   }
 
   // --- Getters -------------------------------------------------------------
 
-  get name(): TenantName {
-    return this._name;
-  }
-
-  get slug(): TenantSlug {
-    return this._slug;
-  }
-
-  get status(): TenantStatus {
-    return this._status;
-  }
-
-  get settings(): TenantSettings {
-    return this._settings;
-  }
-
-  get members(): ReadonlyArray<Member> {
-    return this._members;
-  }
-
-  get ownerUserId(): string {
-    return this._ownerUserId;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
+  get name(): TenantName { return this._name; }
+  get slug(): TenantSlug { return this._slug; }
+  get status(): TenantStatus { return this._status; }
+  get settings(): TenantSettings { return this._settings; }
+  get members(): ReadonlyArray<Member> { return this._members; }
+  get ownerUserId(): string { return this._ownerUserId; }
+  get deletedAt(): Date | null { return this._deletedAt; }
+  get createdAt(): Date { return this._createdAt; }
+  get updatedAt(): Date { return this._updatedAt; }
+  get isDeleted(): boolean { return this._deletedAt !== null; }
 
   // --- Factory -------------------------------------------------------------
 
@@ -121,11 +107,12 @@ export class Tenant extends AggregateRoot<TenantId> {
       settings,
       [],
       props.ownerUserId.trim(),
+      null,
       now,
-      now
+      now,
+      0,
     );
 
-    // Add the owner as the first member
     const ownerResult = Member.create({
       userId: props.ownerUserId.trim(),
       role: MemberRole.Owner,
@@ -141,10 +128,10 @@ export class Tenant extends AggregateRoot<TenantId> {
     tenant._members.push(owner);
 
     tenant.apply(
-      new TenantCreatedEvent(id.value, id.value, props.name.value, props.slug.value)
+      new TenantCreatedEvent(id.value, id.value, props.name.value, props.slug.value),
     );
     tenant.apply(
-      new MemberAddedEvent(id.value, id.value, owner.id.value, owner.userId, owner.role)
+      new MemberAddedEvent(id.value, id.value, owner.id.value, owner.userId, owner.role),
     );
 
     return ok(tenant);
@@ -159,8 +146,10 @@ export class Tenant extends AggregateRoot<TenantId> {
       props.settings,
       props.members,
       props.ownerUserId,
+      props.deletedAt,
       props.createdAt,
-      props.updatedAt
+      props.updatedAt,
+      props.version,
     );
   }
 
@@ -187,7 +176,7 @@ export class Tenant extends AggregateRoot<TenantId> {
     if (this._status === TenantStatus.Suspended) {
       return err(new DomainError('TENANT_ALREADY_SUSPENDED', 'Tenant is already suspended'));
     }
-    if (this._status === TenantStatus.Deleted) {
+    if (this._status === TenantStatus.Deleted || this.isDeleted) {
       return err(new DomainError('TENANT_DELETED', 'Cannot suspend a deleted tenant'));
     }
     this._status = TenantStatus.Suspended;
@@ -200,7 +189,7 @@ export class Tenant extends AggregateRoot<TenantId> {
     if (this._status === TenantStatus.Active) {
       return err(new DomainError('TENANT_ALREADY_ACTIVE', 'Tenant is already active'));
     }
-    if (this._status === TenantStatus.Deleted) {
+    if (this._status === TenantStatus.Deleted || this.isDeleted) {
       return err(new DomainError('TENANT_DELETED', 'Cannot activate a deleted tenant'));
     }
     this._status = TenantStatus.Active;
@@ -209,12 +198,12 @@ export class Tenant extends AggregateRoot<TenantId> {
   }
 
   addMember(member: Member): Result<void, DomainError> {
-    if (this._status === TenantStatus.Deleted) {
+    if (this._status === TenantStatus.Deleted || this.isDeleted) {
       return err(new DomainError('TENANT_DELETED', 'Cannot add members to a deleted tenant'));
     }
     if (this.hasMember(member.userId)) {
       return err(
-        new DomainError('MEMBER_ALREADY_EXISTS', `User "${member.userId}" is already a member`)
+        new DomainError('MEMBER_ALREADY_EXISTS', `User "${member.userId}" is already a member`),
       );
     }
     this._members.push(member);
@@ -225,8 +214,8 @@ export class Tenant extends AggregateRoot<TenantId> {
         this.id.value,
         member.id.value,
         member.userId,
-        member.role
-      )
+        member.role,
+      ),
     );
     return ok(undefined);
   }
@@ -239,7 +228,7 @@ export class Tenant extends AggregateRoot<TenantId> {
     const member = this._members[idx]!;
     if (member.isOwner()) {
       return err(
-        new DomainError('CANNOT_REMOVE_OWNER', 'The owner cannot be removed from the tenant')
+        new DomainError('CANNOT_REMOVE_OWNER', 'The owner cannot be removed from the tenant'),
       );
     }
     const removal = member.remove();
@@ -247,6 +236,30 @@ export class Tenant extends AggregateRoot<TenantId> {
       return err(removal.error);
     }
     this._updatedAt = new Date();
+    return ok(undefined);
+  }
+
+  /**
+   * Soft-delete the tenant. Emits TenantDeletedEvent so audit and
+   * cleanup consumers can react; the row stays in the database and its
+   * slug is freed for re-registration.
+   */
+  softDelete(deletedBy: string): Result<void, DomainError> {
+    if (this.isDeleted) {
+      return err(new DomainError('TENANT_ALREADY_DELETED', 'Tenant is already deleted'));
+    }
+    const actor = (deletedBy ?? '').trim();
+    if (actor.length === 0) {
+      return err(
+        new DomainError('TENANT_DELETED_BY_EMPTY', 'Tenant deletion requires a deletedBy actor'),
+      );
+    }
+    this._deletedAt = new Date();
+    this._status = TenantStatus.Deleted;
+    this._updatedAt = new Date();
+    this.apply(
+      new TenantDeletedEvent(this.id.value, this.id.value, this._ownerUserId, actor),
+    );
     return ok(undefined);
   }
 
@@ -259,6 +272,6 @@ export class Tenant extends AggregateRoot<TenantId> {
   }
 
   isActive(): boolean {
-    return this._status === TenantStatus.Active;
+    return this._status === TenantStatus.Active && !this.isDeleted;
   }
 }

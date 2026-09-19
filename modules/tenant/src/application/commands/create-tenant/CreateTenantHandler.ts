@@ -1,4 +1,4 @@
-﻿import type { DomainEvent, Result } from '@workspace/kernel';
+import type { DomainEvent, Result } from '@workspace/kernel';
 import { err, ok } from '@workspace/kernel';
 import { Tenant, TenantName, TenantSlug } from '../../../domain/index.js';
 import type { TenantRepository } from '../../../domain/index.js';
@@ -16,33 +16,42 @@ import type {
   TenantUnitOfWork,
 } from '../../ports/TenantUnitOfWork.js';
 
+/**
+ * Create a new tenant + its owner member inside one transaction.
+ *
+ * When a UnitOfWork is provided the aggregate save, member save and
+ * outbox enqueue all commit together. Otherwise (tests, early boots) the
+ * repositories are used directly and events are published on the bus.
+ */
 export class CreateTenantHandler {
   constructor(
     private readonly tenantRepository: TenantRepository,
     private readonly memberRepository: MemberRepository,
     private readonly eventBus: EventBusPort,
-    private readonly unitOfWork?: TenantUnitOfWork
+    private readonly unitOfWork?: TenantUnitOfWork,
   ) {}
 
   async execute(
-    command: CreateTenantCommand
+    command: CreateTenantCommand,
   ): Promise<Result<CreateTenantResult, ApplicationError>> {
     const events: DomainEvent[] = [];
-    const result = this.unitOfWork
-      ? await this.unitOfWork.run((context) =>
-          this.executeWithRepositories(command, context, events)
-        )
-      : await this.executeWithRepositories(
-          command,
-          {
-            tenants: this.tenantRepository,
-            members: this.memberRepository,
-            outbox: undefined as never,
-          },
-          events
-        );
 
-    if (!this.unitOfWork) {
+    if (this.unitOfWork) {
+      return this.unitOfWork.withTransaction((tx) =>
+        this.executeWithRepositories(command, tx, events),
+      );
+    }
+
+    const result = await this.executeWithRepositories(
+      command,
+      {
+        tenants: this.tenantRepository,
+        members: this.memberRepository,
+        outbox: undefined as never,
+      },
+      events,
+    );
+    if (result.isOk()) {
       await this.eventBus.publishAll(events);
     }
     return result;
@@ -51,7 +60,7 @@ export class CreateTenantHandler {
   private async executeWithRepositories(
     command: CreateTenantCommand,
     context: TenantTransactionContext,
-    events: DomainEvent[]
+    events: DomainEvent[],
   ): Promise<Result<CreateTenantResult, ApplicationError>> {
     const slugResult = TenantSlug.create(command.slug);
     if (slugResult.isErr()) {

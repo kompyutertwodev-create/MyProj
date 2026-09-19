@@ -42,7 +42,7 @@ import { dirname, join } from 'node:path';
 /**
  * Composition root for the IAM module.
  *
- * Owns identity data only — sessions, users, OAuth. RBAC (roles,
+ * Owns identity data only вЂ” sessions, users, OAuth. RBAC (roles,
  * permissions, ABAC policies) lives in @workspace/access-control and is
  * wired in a separate container (see access-control-container.ts).
  */
@@ -70,6 +70,7 @@ export interface IamContainer {
   getUserByEmail: GetUserByEmailHandler;
   listUsers: ListUsersHandler;
   events: OutboxEventBus;
+  transport: ReturnType<typeof createPlatformEventBus>;
   outboxDispatcher: OutboxEventDispatcher;
 }
 
@@ -227,6 +228,7 @@ export async function createIamContainer(options: IamContainerOptions): Promise<
     getUserByEmail,
     listUsers,
     events,
+    transport,
     outboxDispatcher,
   };
 }

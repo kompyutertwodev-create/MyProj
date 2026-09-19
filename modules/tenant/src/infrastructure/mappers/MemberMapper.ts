@@ -1,4 +1,4 @@
-﻿import { Member, MemberRole, MemberStatus } from '../../domain/index.js';
+import { Member, MemberRole, MemberStatus } from '../../domain/index.js';
 
 export interface MemberPersistence {
   id: string;

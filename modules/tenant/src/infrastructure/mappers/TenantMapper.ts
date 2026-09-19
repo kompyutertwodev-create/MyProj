@@ -1,4 +1,4 @@
-﻿import {
+import {
   Tenant,
   TenantName,
   TenantSettings,
@@ -8,6 +8,12 @@
 } from '../../domain/index.js';
 import type { TenantSettingsRow } from '../database/schema/tenants.table.js';
 
+/**
+ * Persistence representation of a Tenant.
+ *
+ * `deletedAt` and `version` are part of the row so soft delete and
+ * optimistic concurrency work end-to-end.
+ */
 export interface TenantPersistence {
   id: string;
   name: string;
@@ -15,8 +21,10 @@ export interface TenantPersistence {
   status: TenantStatus;
   settings: TenantSettingsRow;
   ownerUserId: string;
+  deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  version: number;
 }
 
 export class TenantMapper {
@@ -37,8 +45,10 @@ export class TenantMapper {
       settings,
       members,
       ownerUserId: row.ownerUserId,
+      deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      version: row.version,
     });
   }
 
@@ -56,8 +66,10 @@ export class TenantMapper {
         primaryColor: tenant.settings.primaryColor,
       },
       ownerUserId: tenant.ownerUserId,
+      deletedAt: tenant.deletedAt,
       createdAt: tenant.createdAt,
       updatedAt: tenant.updatedAt,
+      version: tenant.version,
     };
   }
 }

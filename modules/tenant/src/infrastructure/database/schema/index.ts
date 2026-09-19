@@ -1,4 +1,6 @@
-﻿export { tenants } from './tenants.table.js';
+export { tenants } from './tenants.table.js';
 export { members } from './members.table.js';
+export { outboxEvents } from './outbox-events.table.js';
 export type { TenantRow, TenantInsertRow, TenantSettingsRow } from './tenants.table.js';
 export type { MemberRow, MemberInsertRow } from './members.table.js';
+export type { OutboxEventRow, NewOutboxEventRow } from './outbox-events.table.js';

@@ -50,14 +50,14 @@ export interface ContainerOptions extends Omit<IamContainerOptions, 'database' |
  *
  * Order matters: access-control is created first so its authorization
  * adapter can be injected into the IAM container before IAM handlers are
- * constructed. This is the only place that knows about both modules —
+ * constructed. This is the only place that knows about both modules вЂ”
  * neither imports the other directly.
  */
 export async function createContainer(options: ContainerOptions): Promise<AppContainer> {
   const logger = createLogger('api');
   const database = createPostgresDatabase(options.databaseUrl);
 
-  // 1. Access-control first — it owns RBAC + ABAC.
+  // 1. Access-control first вЂ” it owns RBAC + ABAC.
   const accessControlContainer = await createAccessControlContainer({ database });
   const accessControlRouter = createAccessControlRouterFromContainer(
     accessControlContainer,
@@ -66,13 +66,13 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
     async (_req, _res, next) => { next(); },
   );
 
-  // 2. AuthorizationPort adapter — iam's view of access-control.
+  // 2. AuthorizationPort adapter вЂ” iam's view of access-control.
   const authorization = new AccessControlAuthorizationAdapter(
     accessControlContainer.checkPermission,
     accessControlContainer.listUserRoles,
   );
 
-  // 3. IAM — auth + users + oauth, with the adapter injected.
+  // 3. IAM вЂ” auth + users + oauth, with the adapter injected.
   const iamContainer = await createIamContainer({
     ...options,
     database,
@@ -89,7 +89,7 @@ export async function createContainer(options: ContainerOptions): Promise<AppCon
 
   const tenantContainer = await createTenantContainer({
     database,
-    events: iamContainer.events,
+    transport: iamContainer.transport,
   });
   const tenantRouter = createTenantRouterFromContainer(
     tenantContainer,

@@ -1,4 +1,4 @@
-﻿import { and, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { MemberRepository } from '../../domain/repositories/MemberRepository.js';
 import type { Member } from '../../domain/Member.js';
@@ -49,7 +49,7 @@ export class DrizzleMemberRepository implements MemberRepository {
 
   async save(_member: Member): Promise<void> {
     throw new Error(
-      'DrizzleMemberRepository.save(member) requires a tenant id; use saveMany via TenantRepository'
+      'DrizzleMemberRepository.save(member) requires a tenant id; use saveMany via TenantRepository',
     );
   }
 

@@ -1,4 +1,4 @@
-﻿import { DomainError, Entity, Result, err, ok } from '@workspace/kernel';
+import { DomainError, Entity, Result, err, ok } from '@workspace/kernel';
 import { MemberId } from './MemberId.js';
 import { MemberRole } from './MemberRole.js';
 import { MemberStatus } from './MemberStatus.js';
@@ -19,12 +19,13 @@ export interface MemberReconstructProps {
   joinedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  version?: number;
 }
 
 /**
  * Entity: a User's participation inside a Tenant.
  *
- * A Member is not an aggregate root — it lives inside the Tenant aggregate.
+ * A Member is not an aggregate root вЂ” it lives inside the Tenant aggregate.
  * One User can be a Member of many Tenants (join entity pattern).
  */
 export class Member extends Entity<MemberId> {
@@ -44,7 +45,7 @@ export class Member extends Entity<MemberId> {
     invitedBy: string | null,
     joinedAt: Date | null,
     createdAt: Date,
-    updatedAt: Date
+    updatedAt: Date,
   ) {
     super(id);
     this._userId = userId;
@@ -56,37 +57,13 @@ export class Member extends Entity<MemberId> {
     this._updatedAt = updatedAt;
   }
 
-  // --- Getters -------------------------------------------------------------
-
-  get userId(): string {
-    return this._userId;
-  }
-
-  get role(): MemberRole {
-    return this._role;
-  }
-
-  get status(): MemberStatus {
-    return this._status;
-  }
-
-  get invitedBy(): string | null {
-    return this._invitedBy;
-  }
-
-  get joinedAt(): Date | null {
-    return this._joinedAt;
-  }
-
-  get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  get updatedAt(): Date {
-    return this._updatedAt;
-  }
-
-  // --- Factory -------------------------------------------------------------
+  get userId(): string { return this._userId; }
+  get role(): MemberRole { return this._role; }
+  get status(): MemberStatus { return this._status; }
+  get invitedBy(): string | null { return this._invitedBy; }
+  get joinedAt(): Date | null { return this._joinedAt; }
+  get createdAt(): Date { return this._createdAt; }
+  get updatedAt(): Date { return this._updatedAt; }
 
   static create(props: MemberCreateProps): Result<Member, DomainError> {
     if (!props.userId || props.userId.trim().length === 0) {
@@ -106,8 +83,8 @@ export class Member extends Entity<MemberId> {
         props.invitedBy ?? null,
         joinedAt,
         now,
-        now
-      )
+        now,
+      ),
     );
   }
 
@@ -120,11 +97,9 @@ export class Member extends Entity<MemberId> {
       props.invitedBy,
       props.joinedAt,
       props.createdAt,
-      props.updatedAt
+      props.updatedAt,
     );
   }
-
-  // --- Business methods ----------------------------------------------------
 
   changeRole(newRole: MemberRole): Result<void, DomainError> {
     if (this._role === newRole) {
