@@ -5,5 +5,6 @@ export interface ListUsersQuery {
   pageSize: number;
   search?: string;
   status?: UserStatus;
-  roleFilter?: string;
+  tenantId?: string;
+  includeDeleted?: boolean;
 }

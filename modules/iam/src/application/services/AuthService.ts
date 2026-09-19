@@ -1,5 +1,5 @@
 import type { Result } from '@workspace/kernel';
-import { err, ok } from '@workspace/kernel';
+import { err, ok, sha256Hex } from '@workspace/kernel';
 import type { LoginUserHandler } from '../commands/login-user/LoginUserHandler.js';
 import type { LoginUserCommand } from '../commands/login-user/LoginUserCommand.js';
 import type { LoginUserResult } from '../commands/login-user/LoginUserResult.js';
@@ -10,6 +10,8 @@ import type { DomainTokenService } from '../../domain/domain-services/TokenServi
 import type { ApplicationError } from '../ports/ApplicationError.js';
 import { UnauthorizedApplicationError } from '../ports/ApplicationError.js';
 
+const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 export interface RefreshTokenResult {
   accessToken: string;
   refreshToken: string;
@@ -17,7 +19,10 @@ export interface RefreshTokenResult {
 
 /**
  * Authentication facade for HTTP, GraphQL and gRPC adapters.
- * It owns flow orchestration; adapters never manipulate sessions or JWTs directly.
+ *
+ * Refresh tokens are addressed by their SHA-256 hash. Access tokens carry
+ * no role claims yet: RBAC is owned by access-control and reached through
+ * the AuthorizationPort, which the composition root wires in a later phase.
  */
 export class AuthService {
   constructor(
@@ -25,7 +30,7 @@ export class AuthService {
     private readonly logoutHandler: LogoutUserHandler,
     private readonly sessions: SessionRepository,
     private readonly users: UserRepository,
-    private readonly tokens: DomainTokenService
+    private readonly tokens: DomainTokenService,
   ) {}
 
   login(command: LoginUserCommand): Promise<Result<LoginUserResult, ApplicationError>> {
@@ -36,7 +41,9 @@ export class AuthService {
     return this.logoutHandler.execute({ userId, sessionId });
   }
 
-  async refreshToken(refreshToken: string): Promise<Result<RefreshTokenResult, ApplicationError>> {
+  async refreshToken(
+    refreshToken: string,
+  ): Promise<Result<RefreshTokenResult, ApplicationError>> {
     let tokenPayload: { userId: string; sessionId: string };
     try {
       tokenPayload = await this.tokens.verifyRefreshToken(refreshToken);
@@ -49,7 +56,7 @@ export class AuthService {
       !session ||
       session.isExpired() ||
       session.userId !== tokenPayload.userId ||
-      session.refreshToken !== refreshToken
+      session.refreshTokenHash !== sha256Hex(refreshToken)
     ) {
       return err(new UnauthorizedApplicationError('Refresh token is invalid or expired'));
     }
@@ -59,18 +66,19 @@ export class AuthService {
       return err(new UnauthorizedApplicationError('User account is not active'));
     }
 
-    const roles = user.roles.map((role) => role.name.value);
-    const accessToken = await this.tokens.generateAccessToken(user.id.value, roles);
+    // Role claims are supplied by the AuthorizationPort in a later phase.
+    const roleNames: string[] = [];
+    const accessToken = await this.tokens.generateAccessToken(user.id.value, roleNames);
     const nextRefreshToken = await this.tokens.generateRefreshToken(
       user.id.value,
-      session.id.value
+      session.id.value,
     );
-    const nextExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const nextExpiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
     const rotated = await this.sessions.rotate(
       session.id.value,
-      refreshToken,
-      nextRefreshToken,
-      nextExpiresAt
+      sha256Hex(refreshToken),
+      sha256Hex(nextRefreshToken),
+      nextExpiresAt,
     );
     if (!rotated) {
       return err(new UnauthorizedApplicationError('Refresh token has already been used'));
@@ -80,7 +88,7 @@ export class AuthService {
   }
 
   async validateToken(
-    token: string
+    token: string,
   ): Promise<Result<{ userId: string; roles: string[] }, ApplicationError>> {
     try {
       return ok(await this.tokens.verifyAccessToken(token));

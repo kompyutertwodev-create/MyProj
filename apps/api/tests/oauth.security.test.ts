@@ -11,7 +11,6 @@ import {
   OAuthProviderRegistry,
   OAuthLoginHandler,
   InMemoryUserRepository,
-  InMemoryRoleRepository,
   InMemorySessionRepository,
   InMemorySocialIdentityRepository,
 } from '@workspace/iam';
@@ -20,10 +19,6 @@ import {
   Email,
   OAuthProvider,
   PasswordHash,
-  Permission,
-  Role,
-  RoleId,
-  RoleName,
   User,
   UserStatus,
 } from '../../../modules/iam/src/domain/index.js';
@@ -57,7 +52,11 @@ before(async () => {
     initiateOAuth: {
       execute: async (command: { provider: string }) => {
         const state = `test-state-${command.provider}-${Date.now()}`;
-        await stateRepository.save(state, command.provider as OAuthProvider, new Date(Date.now() + 10 * 60 * 1000));
+        await stateRepository.save(
+          state,
+          command.provider as OAuthProvider,
+          new Date(Date.now() + 10 * 60 * 1000),
+        );
         return ok({
           authorizationUrl: `https://provider.example/authorize?state=${encodeURIComponent(state)}`,
           state,
@@ -102,9 +101,7 @@ test('stores OAuth state server-side and consumes it exactly once', async () => 
 
   const callback = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state!)}`,
-    {
-      headers: { cookie: cookie!.split(';')[0] },
-    }
+    { headers: { cookie: cookie!.split(';')[0] } },
   );
   assert.equal(callback.status, 502);
   const callbackBody = await callback.json();
@@ -112,9 +109,7 @@ test('stores OAuth state server-side and consumes it exactly once', async () => 
 
   const replay = await request(
     `/google/callback?code=provider-code&state=${encodeURIComponent(state!)}`,
-    {
-      headers: { cookie: cookie!.split(';')[0] },
-    }
+    { headers: { cookie: cookie!.split(';')[0] } },
   );
   assert.equal(replay.status, 400);
   assert.equal((await replay.json()).error.code, 'OAUTH_STATE_INVALID');
@@ -130,7 +125,7 @@ test('rejects a valid OAuth state without its browser-bound cookie', async () =>
   const state = location.searchParams.get('state')!;
 
   const callback = await request(
-    `/google/callback?code=provider-code&state=${encodeURIComponent(state)}`
+    `/google/callback?code=provider-code&state=${encodeURIComponent(state)}`,
   );
   assert.equal(callback.status, 400);
   assert.equal((await callback.json()).error.code, 'OAUTH_STATE_INVALID');
@@ -140,7 +135,11 @@ test('rejects an expired server-side OAuth state', async () => {
   const registry = new OAuthProviderRegistry();
   registry.register(provider);
   const expiredStateRepository = new InMemoryOAuthStateRepository();
-  await expiredStateRepository.save('expired-state', 'google' as OAuthProvider, new Date(Date.now() - 1));
+  await expiredStateRepository.save(
+    'expired-state',
+    'google' as OAuthProvider,
+    new Date(Date.now() - 1),
+  );
 
   const router = createOAuthRouter({
     providerRegistry: registry,
@@ -148,7 +147,11 @@ test('rejects an expired server-side OAuth state', async () => {
     initiateOAuth: {
       execute: async (command: { provider: string }) => {
         const state = `test-state-${command.provider}-${Date.now()}`;
-        await expiredStateRepository.save(state, command.provider as OAuthProvider, new Date(Date.now() + 10 * 60 * 1000));
+        await expiredStateRepository.save(
+          state,
+          command.provider as OAuthProvider,
+          new Date(Date.now() + 10 * 60 * 1000),
+        );
         return ok({
           authorizationUrl: `https://provider.example/authorize?state=${encodeURIComponent(state)}`,
           state,
@@ -172,10 +175,9 @@ test('rejects an expired server-side OAuth state', async () => {
   const isolatedAddress = isolatedServer.address() as AddressInfo;
 
   try {
-    // Directly test with the pre-expired state
     const callback = await fetch(
       `http://127.0.0.1:${isolatedAddress.port}/google/callback?code=code&state=expired-state`,
-      { headers: { cookie: 'oauth_state=expired-state' } }
+      { headers: { cookie: 'oauth_state=expired-state' } },
     );
     assert.equal(callback.status, 400);
     assert.equal((await callback.json()).error.code, 'OAUTH_STATE_INVALID');
@@ -194,29 +196,20 @@ test('requires absolute redirect URIs for OAuth providers', () => {
         clientSecret: 'secret',
         redirectUri: '/api/v1/auth/oauth/google/callback',
       }),
-    /absolute URL/
+    /absolute URL/,
   );
 });
 
 test('links a verified social email to the existing local user', async () => {
   const users = new InMemoryUserRepository();
-  const roles = new InMemoryRoleRepository();
   const sessions = new InMemorySessionRepository();
   const socialIdentities = new InMemorySocialIdentityRepository();
-  const role = Role.create(new RoleId('role-user'), {
-    name: RoleName.create('user').getOrThrow(),
-    description: 'Standard user',
-    permissions: [Permission.create('content:read', 'Read content').getOrThrow()],
-    isSystem: true,
-  });
-  await roles.save(role);
 
   const existingUser = User.create({
     email: Email.create('unified@example.com').getOrThrow(),
     passwordHash: PasswordHash.create('existing-password-hash'),
     displayName: 'Local User',
     status: UserStatus.Active,
-    roles: [role],
   }).getOrThrow();
   await users.save(existingUser);
 
@@ -251,7 +244,6 @@ test('links a verified social email to the existing local user', async () => {
     sessions,
     tokenService,
     passwordService,
-    roles
   );
 
   const result = await handler.handle({
@@ -263,7 +255,10 @@ test('links a verified social email to the existing local user', async () => {
   assert.equal(result.isNewUser, false);
   assert.equal(result.user.id, existingUser.id.value);
   assert.equal(result.user.email, 'unified@example.com');
-  const linked = await socialIdentities.findByProvider(OAuthProvider.Google, 'google-user-1');
+  const linked = await socialIdentities.findByProvider(
+    OAuthProvider.Google,
+    'google-user-1',
+  );
   assert.equal(linked?.userId, existingUser.id.value);
   const usersWithSameEmail = await users.findByEmail('unified@example.com');
   assert.equal(usersWithSameEmail?.id.value, existingUser.id.value);
@@ -295,7 +290,6 @@ test('does not auto-merge an unverified social email', async () => {
       generateRefreshToken: async () => 'refresh',
     } as never,
     { hash: async () => 'hash' } as never,
-    new InMemoryRoleRepository()
   );
 
   await assert.rejects(
@@ -304,6 +298,6 @@ test('does not auto-merge an unverified social email', async () => {
       code: 'provider-code',
       deviceInfo: { ipAddress: '127.0.0.1', userAgent: 'node:test' },
     }),
-    /verified social email is required/
+    /verified social email is required/,
   );
 });

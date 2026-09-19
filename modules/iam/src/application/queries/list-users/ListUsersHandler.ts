@@ -8,9 +8,18 @@ export class ListUsersHandler {
 
   async execute(query: ListUsersQuery): Promise<PaginatedResult<UserView>> {
     const result = await this.userRepository.findAll(
-      { search: query.search, status: query.status, roleFilter: query.roleFilter },
-      { page: Math.max(1, query.page), pageSize: Math.min(100, Math.max(1, query.pageSize)) }
+      {
+        search: query.search,
+        status: query.status,
+        tenantId: query.tenantId,
+        includeDeleted: query.includeDeleted,
+      },
+      {
+        page: Math.max(1, query.page),
+        pageSize: Math.min(100, Math.max(1, query.pageSize)),
+      },
     );
+
     return {
       ...result,
       items: result.items.map((user) => ({
@@ -19,8 +28,7 @@ export class ListUsersHandler {
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
         status: user.status,
-        roles: user.roles.map((r) => r.name.value),
-        permissions: [...new Set(user.roles.flatMap((r) => r.permissions.map((p) => p.name)))],
+        tenantId: user.tenantId,
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       })),

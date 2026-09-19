@@ -3,12 +3,18 @@ import type {
   IamTransactionContext,
   IamUnitOfWork,
 } from '../../application/ports/IamUnitOfWork.js';
-import { DrizzleRoleRepository } from '../repositories/DrizzleRoleRepository.js';
 import { DrizzleSessionRepository } from '../repositories/DrizzleSessionRepository.js';
 import { DrizzleSocialIdentityRepository } from '../repositories/DrizzleSocialIdentityRepository.js';
 import { DrizzleUserRepository } from '../repositories/DrizzleUserRepository.js';
 import { DrizzleOutboxRepository } from '../repositories/DrizzleOutboxRepository.js';
 
+/**
+ * Drizzle-backed UnitOfWork for the IAM module.
+ *
+ * Handlers receive a transaction-scoped context whose repositories share
+ * the same connection. RBAC is not part of this context вЂ” roles and
+ * policies live in access-control and run in their own transaction.
+ */
 export class DrizzleIamUnitOfWork implements IamUnitOfWork {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private readonly db: NodePgDatabase<any>) {}
@@ -22,7 +28,6 @@ export class DrizzleIamUnitOfWork implements IamUnitOfWork {
       const txDb = transaction as any;
       return work({
         users: new DrizzleUserRepository(txDb),
-        roles: new DrizzleRoleRepository(txDb),
         sessions: new DrizzleSessionRepository(txDb),
         socialIdentities: new DrizzleSocialIdentityRepository(txDb),
         outbox: new DrizzleOutboxRepository(txDb),

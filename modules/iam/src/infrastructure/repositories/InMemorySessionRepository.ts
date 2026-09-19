@@ -1,6 +1,13 @@
 import type { SessionRepository } from '../../domain/repositories/SessionRepository.js';
 import type { Session } from '../../domain/Session.js';
 
+/**
+ * In-memory SessionRepository for unit tests.
+ *
+ * Rotations are atomic from the caller's perspective: `rotate` succeeds
+ * only if the stored hash still matches what the caller supplied, which
+ * mirrors the optimistic WHERE clause used by the Drizzle adapter.
+ */
 export class InMemorySessionRepository implements SessionRepository {
   private readonly sessions = new Map<string, Session>();
 
@@ -12,8 +19,10 @@ export class InMemorySessionRepository implements SessionRepository {
     return [...this.sessions.values()].filter((s) => s.userId === userId);
   }
 
-  async findByRefreshToken(token: string): Promise<Session | null> {
-    return [...this.sessions.values()].find((s) => s.refreshToken === token) ?? null;
+  async findByRefreshTokenHash(hash: string): Promise<Session | null> {
+    return (
+      [...this.sessions.values()].find((s) => s.refreshTokenHash === hash) ?? null
+    );
   }
 
   async save(session: Session): Promise<void> {
@@ -22,15 +31,19 @@ export class InMemorySessionRepository implements SessionRepository {
 
   async rotate(
     id: string,
-    currentRefreshToken: string,
-    nextRefreshToken: string,
-    expiresAt: Date
+    currentRefreshTokenHash: string,
+    nextRefreshTokenHash: string,
+    expiresAt: Date,
   ): Promise<boolean> {
     const session = this.sessions.get(id);
-    if (!session || session.refreshToken !== currentRefreshToken || session.isExpired()) {
+    if (
+      !session ||
+      session.refreshTokenHash !== currentRefreshTokenHash ||
+      session.isExpired()
+    ) {
       return false;
     }
-    session.refresh(nextRefreshToken, expiresAt);
+    session.refresh(nextRefreshTokenHash, expiresAt);
     return true;
   }
 

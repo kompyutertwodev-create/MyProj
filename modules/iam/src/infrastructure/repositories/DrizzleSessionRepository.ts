@@ -5,25 +5,39 @@ import { Session } from '../../domain/Session.js';
 import { SessionId } from '../../domain/SessionId.js';
 import { sessions } from '../database/schema/sessions.table.js';
 
+/**
+ * Drizzle-backed SessionRepository.
+ *
+ * Persists only the SHA-256 hash of the refresh token вЂ” the plaintext
+ * never leaves the application layer. Lookups by token therefore hash the
+ * input first (see `findByRefreshTokenHash`).
+ */
 export class DrizzleSessionRepository implements SessionRepository {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(private readonly db: NodePgDatabase<any>) {}
 
   async findById(id: string): Promise<Session | null> {
-    const rows = await this.db.select().from(sessions).where(eq(sessions.id, id)).limit(1);
+    const rows = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.id, id))
+      .limit(1);
     return rows[0] ? this.toDomain(rows[0]) : null;
   }
 
   async findByUserId(userId: string): Promise<Session[]> {
-    const rows = await this.db.select().from(sessions).where(eq(sessions.identityId, userId));
-    return rows.map((r) => this.toDomain(r));
-  }
-
-  async findByRefreshToken(token: string): Promise<Session | null> {
     const rows = await this.db
       .select()
       .from(sessions)
-      .where(eq(sessions.refreshToken, token))
+      .where(eq(sessions.identityId, userId));
+    return rows.map((r) => this.toDomain(r));
+  }
+
+  async findByRefreshTokenHash(hash: string): Promise<Session | null> {
+    const rows = await this.db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.refreshTokenHash, hash))
       .limit(1);
     return rows[0] ? this.toDomain(rows[0]) : null;
   }
@@ -39,7 +53,7 @@ export class DrizzleSessionRepository implements SessionRepository {
         deviceType: session.deviceType,
         ipAddress: session.ipAddress,
         userAgent: session.userAgent,
-        refreshToken: session.refreshToken,
+        refreshTokenHash: session.refreshTokenHash,
         expiresAt: session.expiresAt,
         lastActiveAt: session.lastActiveAt,
         createdAt: session.createdAt,
@@ -47,7 +61,7 @@ export class DrizzleSessionRepository implements SessionRepository {
       .onConflictDoUpdate({
         target: sessions.id,
         set: {
-          refreshToken: session.refreshToken,
+          refreshTokenHash: session.refreshTokenHash,
           expiresAt: session.expiresAt,
           lastActiveAt: session.lastActiveAt,
         },
@@ -56,18 +70,23 @@ export class DrizzleSessionRepository implements SessionRepository {
 
   async rotate(
     id: string,
-    currentRefreshToken: string,
-    nextRefreshToken: string,
-    expiresAt: Date
+    currentRefreshTokenHash: string,
+    nextRefreshTokenHash: string,
+    expiresAt: Date,
   ): Promise<boolean> {
     const updated = await this.db
       .update(sessions)
       .set({
-        refreshToken: nextRefreshToken,
+        refreshTokenHash: nextRefreshTokenHash,
         expiresAt,
         lastActiveAt: new Date(),
       })
-      .where(and(eq(sessions.id, id), eq(sessions.refreshToken, currentRefreshToken)))
+      .where(
+        and(
+          eq(sessions.id, id),
+          eq(sessions.refreshTokenHash, currentRefreshTokenHash),
+        ),
+      )
       .returning({ id: sessions.id });
     return updated.length > 0;
   }
@@ -88,7 +107,7 @@ export class DrizzleSessionRepository implements SessionRepository {
       deviceType: row.deviceType,
       ipAddress: row.ipAddress,
       userAgent: row.userAgent,
-      refreshToken: row.refreshToken,
+      refreshTokenHash: row.refreshTokenHash,
       expiresAt: row.expiresAt,
       lastActiveAt: row.lastActiveAt,
       createdAt: row.createdAt,

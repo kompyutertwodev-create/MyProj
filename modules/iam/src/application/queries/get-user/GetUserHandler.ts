@@ -2,6 +2,13 @@ import type { UserRepository } from '../../../domain/repositories/UserRepository
 import type { GetUserQuery } from './GetUserQuery.js';
 import type { UserView } from '../UserView.js';
 
+/**
+ * Read a User by id and project it to a flat view.
+ *
+ * Roles / permissions are intentionally absent: those are owned by the
+ * access-control module and queried through the AuthorizationPort when the
+ * caller actually needs them.
+ */
 export class GetUserHandler {
   constructor(private readonly userRepository: UserRepository) {}
 
@@ -14,8 +21,7 @@ export class GetUserHandler {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       status: user.status,
-      roles: user.roles.map((r) => r.name.value),
-      permissions: [...new Set(user.roles.flatMap((r) => r.permissions.map((p) => p.name)))],
+      tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

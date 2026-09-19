@@ -25,7 +25,11 @@ export class ZodUserValidator {
     return UpdateUserInputSchema.parse(input);
   }
 
-  /** Explicitly maps only public fields; passwords and domain internals never leak. */
+  /**
+   * Map only public fields вЂ” passwords, sessions and RBAC data never leak.
+   * Roles/permissions are queried separately through the AuthorizationPort
+   * when the caller actually needs them.
+   */
   static toPublicView(user: User): UserView {
     return {
       id: user.id.value,
@@ -33,8 +37,7 @@ export class ZodUserValidator {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       status: user.status,
-      roles: user.roles.map((role) => role.name.value),
-      permissions: [...new Set(user.roles.flatMap((role) => role.permissions.map((p) => p.name)))],
+      tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

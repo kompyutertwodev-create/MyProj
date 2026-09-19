@@ -1,8 +1,17 @@
 import type { PaginatedResult, PaginationParams } from '@workspace/kernel';
-import type { UserRepository, UserFilters } from '../../domain/repositories/UserRepository.js';
+import type {
+  UserRepository,
+  UserFilters,
+} from '../../domain/repositories/UserRepository.js';
 import type { User } from '../../domain/User.js';
-import type { Role } from '../../domain/Role.js';
 
+/**
+ * In-memory UserRepository for unit tests.
+ *
+ * Filters: search (email or display name, case-insensitive), status,
+ * tenant, and includeDeleted. RBAC filtering is intentionally absent вЂ”
+ * role-based queries go through access-control.
+ */
 export class InMemoryUserRepository implements UserRepository {
   private readonly users = new Map<string, User>();
 
@@ -12,25 +21,38 @@ export class InMemoryUserRepository implements UserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const normalized = email.trim().toLowerCase();
-    return [...this.users.values()].find((u) => u.email.value === normalized) ?? null;
+    return (
+      [...this.users.values()].find((u) => u.email.value === normalized) ?? null
+    );
   }
 
   async findAll(
     filters: UserFilters,
-    pagination: PaginationParams
+    pagination: PaginationParams,
   ): Promise<PaginatedResult<User>> {
     let values = [...this.users.values()];
+
+    if (!filters.includeDeleted) {
+      values = values.filter((u) => !u.isDeleted);
+    }
+    if (filters.tenantId) {
+      values = values.filter((u) => u.tenantId === filters.tenantId);
+    }
     if (filters.search) {
       const search = filters.search.toLowerCase();
       values = values.filter(
-        (u) => u.email.value.includes(search) || u.displayName.toLowerCase().includes(search)
+        (u) =>
+          u.email.value.includes(search) ||
+          u.displayName.toLowerCase().includes(search),
       );
     }
-    if (filters.status) values = values.filter((u) => u.status === filters.status);
-    if (filters.roleFilter) values = values.filter((u) => u.hasRole(filters.roleFilter!));
+    if (filters.status) {
+      values = values.filter((u) => u.status === filters.status);
+    }
 
     const total = values.length;
     const start = Math.max(0, (pagination.page - 1) * pagination.pageSize);
+
     return {
       items: values.slice(start, start + pagination.pageSize),
       total,
@@ -44,13 +66,6 @@ export class InMemoryUserRepository implements UserRepository {
 
   async save(user: User): Promise<void> {
     this.users.set(user.id.value, user);
-  }
-
-  async assignRole(userId: string, role: Role): Promise<void> {
-    const user = this.users.get(userId);
-    if (user && !user.hasRole(role.name.value)) {
-      user.assignRole(role);
-    }
   }
 
   async delete(id: string): Promise<void> {

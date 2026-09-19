@@ -8,7 +8,11 @@ export interface SessionProps {
   deviceType: string;
   ipAddress: string;
   userAgent: string;
-  refreshToken: string;
+  /**
+   * SHA-256 hash of the refresh token. The plaintext token never touches
+   * persistence вЂ” a leaked dump cannot be used to hijack sessions.
+   */
+  refreshTokenHash: string;
   expiresAt: Date;
   lastActiveAt: Date;
   createdAt: Date;
@@ -21,7 +25,7 @@ export class Session extends Entity<SessionId> {
   private _deviceType: string;
   private _ipAddress: string;
   private _userAgent: string;
-  private _refreshToken: string;
+  private _refreshTokenHash: string;
   private _expiresAt: Date;
   private _lastActiveAt: Date;
   private _createdAt: Date;
@@ -35,7 +39,7 @@ export class Session extends Entity<SessionId> {
     this._deviceType = props.deviceType;
     this._ipAddress = props.ipAddress;
     this._userAgent = props.userAgent;
-    this._refreshToken = props.refreshToken;
+    this._refreshTokenHash = props.refreshTokenHash;
     this._expiresAt = props.expiresAt;
     this._lastActiveAt = props.lastActiveAt;
     this._createdAt = props.createdAt;
@@ -59,8 +63,8 @@ export class Session extends Entity<SessionId> {
   get userAgent(): string {
     return this._userAgent;
   }
-  get refreshToken(): string {
-    return this._refreshToken;
+  get refreshTokenHash(): string {
+    return this._refreshTokenHash;
   }
   get expiresAt(): Date {
     return this._expiresAt;
@@ -75,8 +79,8 @@ export class Session extends Entity<SessionId> {
     return this._revoked;
   }
 
-  refresh(newToken: string, newExpiry: Date): void {
-    this._refreshToken = newToken;
+  refresh(nextHash: string, newExpiry: Date): void {
+    this._refreshTokenHash = nextHash;
     this._expiresAt = newExpiry;
     this._lastActiveAt = new Date();
   }

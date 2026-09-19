@@ -1,7 +1,13 @@
 import type { User } from '../../../domain/User.js';
 import type { UserView } from '../../../application/queries/UserView.js';
 
-/** Never expose password hashes, refresh tokens, or internal domain events. */
+/**
+ * UserTransformer вЂ” map a User aggregate to its public HTTP view.
+ *
+ * Never exposes password hashes, refresh tokens or internal domain state.
+ * Roles and permissions are intentionally absent: they belong to the
+ * access-control module and are looked up on demand.
+ */
 export class UserTransformer {
   static toView(user: User): UserView {
     return {
@@ -10,8 +16,7 @@ export class UserTransformer {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       status: user.status,
-      roles: user.roles.map((r) => r.name.value),
-      permissions: [...new Set(user.roles.flatMap((r) => r.permissions.map((p) => p.name)))],
+      tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

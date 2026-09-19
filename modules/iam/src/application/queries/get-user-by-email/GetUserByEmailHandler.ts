@@ -14,8 +14,7 @@ export class GetUserByEmailHandler {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       status: user.status,
-      roles: user.roles.map((r) => r.name.value),
-      permissions: [...new Set(user.roles.flatMap((r) => r.permissions.map((p) => p.name)))],
+      tenantId: user.tenantId,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };

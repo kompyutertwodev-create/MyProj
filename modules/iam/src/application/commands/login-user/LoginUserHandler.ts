@@ -1,5 +1,5 @@
 import type { DomainEvent, Result } from '@workspace/kernel';
-import { err, ok } from '@workspace/kernel';
+import { err, ok, sha256Hex } from '@workspace/kernel';
 import { Email, Session, SessionId } from '../../../domain/index.js';
 import type {
   UserRepository,
@@ -17,9 +17,16 @@ import {
 import type { EventBusPort } from '../../ports/EventBusPort.js';
 import type { IamTransactionContext, IamUnitOfWork } from '../../ports/IamUnitOfWork.js';
 
-const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Authenticate a user by email + password and mint a session.
+ *
+ * The access token is issued with an *empty* role list for now: roles are
+ * resolved through the AuthorizationPort and injected by the composition
+ * root in a later phase. Until then the JWT carries no role claims, which
+ * is safe (deny-by-default) and keeps this handler decoupled from RBAC.
+ */
 export class LoginUserHandler {
   constructor(
     private readonly userRepository: UserRepository,
@@ -27,25 +34,26 @@ export class LoginUserHandler {
     private readonly passwordService: PasswordService,
     private readonly tokenService: DomainTokenService,
     private readonly eventBus: EventBusPort,
-    private readonly unitOfWork?: IamUnitOfWork
+    private readonly unitOfWork?: IamUnitOfWork,
   ) {}
 
-  async execute(command: LoginUserCommand): Promise<Result<LoginUserResult, ApplicationError>> {
+  async execute(
+    command: LoginUserCommand,
+  ): Promise<Result<LoginUserResult, ApplicationError>> {
     const events: DomainEvent[] = [];
     const result = this.unitOfWork
       ? await this.unitOfWork.run((context) =>
-          this.executeWithRepositories(command, context, events)
+          this.executeWithRepositories(command, context, events),
         )
       : await this.executeWithRepositories(
           command,
           {
             users: this.userRepository,
-            roles: undefined as never,
             sessions: this.sessionRepository,
             socialIdentities: undefined as never,
             outbox: undefined as never,
-          },
-          events
+          } as IamTransactionContext,
+          events,
         );
 
     if (!this.unitOfWork) {
@@ -57,7 +65,7 @@ export class LoginUserHandler {
   private async executeWithRepositories(
     command: LoginUserCommand,
     context: IamTransactionContext,
-    events: DomainEvent[]
+    events: DomainEvent[],
   ): Promise<Result<LoginUserResult, ApplicationError>> {
     const emailResult = Email.create(command.email);
     if (emailResult.isErr()) {
@@ -66,12 +74,13 @@ export class LoginUserHandler {
 
     const user = await context.users.findByEmail(emailResult.value.value);
     if (!user) {
+      // Do not leak whether the account exists: same error as wrong password.
       return err(new UnauthorizedApplicationError('Invalid credentials'));
     }
 
     const passwordValid = await this.passwordService.compare(
       command.password,
-      user.passwordHash.value
+      user.passwordHash.value,
     );
     if (!passwordValid) {
       return err(new UnauthorizedApplicationError('Invalid credentials'));
@@ -81,18 +90,23 @@ export class LoginUserHandler {
       return err(new UnauthorizedApplicationError(`Account is ${user.status}`));
     }
 
-    // Generate tokens
-    const roleNames = user.roles.map((r) => r.name.value);
-    const accessToken = await this.tokenService.generateAccessToken(user.id.value, roleNames);
+    // RBAC lives in access-control; until the AuthorizationPort is wired
+    // through, the access token carries no role claims.
+    const roleNames: string[] = [];
+    const accessToken = await this.tokenService.generateAccessToken(
+      user.id.value,
+      roleNames,
+    );
 
-    // Create session
     const now = new Date();
     const expiresAt = new Date(now.getTime() + REFRESH_TOKEN_TTL_MS);
     const sessionId = new SessionId();
     const refreshToken = await this.tokenService.generateRefreshToken(
       user.id.value,
-      sessionId.value
+      sessionId.value,
     );
+    const refreshTokenHash = sha256Hex(refreshToken);
+
     const session = Session.create(sessionId, {
       userId: user.id.value,
       deviceId: command.deviceInfo.deviceId,
@@ -100,7 +114,7 @@ export class LoginUserHandler {
       deviceType: command.deviceInfo.deviceType,
       ipAddress: command.deviceInfo.ipAddress,
       userAgent: command.deviceInfo.userAgent,
-      refreshToken,
+      refreshTokenHash,
       expiresAt,
       lastActiveAt: now,
       createdAt: now,
@@ -108,7 +122,6 @@ export class LoginUserHandler {
 
     await context.sessions.save(session);
 
-    // Raise domain event via user
     user.addSession(session);
     const pendingEvents = user.pullDomainEvents();
     if (context.outbox) {

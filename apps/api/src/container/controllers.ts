@@ -10,6 +10,14 @@ import type { AuditContainer } from './audit-container.js';
 import type { NotificationContainer } from './notification-container.js';
 import type { AccessControlContainer } from './access-control-container.js';
 
+/**
+ * Build the IAM HTTP surface.
+ *
+ * RBAC endpoints are NOT mounted here вЂ” they live under
+ * /api/v1/access-control and are provided by
+ * {@link createAccessControlRouterFromContainer}. This router owns auth,
+ * users and OAuth only.
+ */
 export function createIamRouterFromContainer(container: IamContainer): Router {
   return createIamRouter({
     auth: {
@@ -23,25 +31,12 @@ export function createIamRouterFromContainer(container: IamContainer): Router {
     },
     getUser: container.getUser,
     listUsers: container.listUsers,
-    assignRole: container.assignRole,
-    checkPermission: container.checkPermission,
-    listRoles: container.listRoles,
     oauth: {
       initiateOAuth: container.initiateOAuth,
       registry: container.providerRegistry,
       stateRepository: container.oauthStates,
       login: container.oauthLogin,
       link: container.linkSocialAccount,
-    },
-    policy: {
-      createPolicy: container.createPolicy,
-      updatePolicy: container.updatePolicy,
-      deletePolicy: container.deletePolicy,
-      activatePolicy: container.activatePolicy,
-      deactivatePolicy: container.deactivatePolicy,
-      listPolicies: container.listPolicies,
-      getPolicy: container.getPolicy,
-      service: container.policyService,
     },
   });
 }

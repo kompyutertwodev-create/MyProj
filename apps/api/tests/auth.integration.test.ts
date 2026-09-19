@@ -4,7 +4,6 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createContainer } from '../src/container';
 import { createServer } from '../src/server';
-import { DrizzleRoleRepository } from '@workspace/iam';
 
 const databaseUrl = process.env['DATABASE_URL'];
 if (!databaseUrl) throw new Error('DATABASE_URL is required for integration tests');
@@ -16,21 +15,20 @@ let baseUrl: string;
 
 async function request(
   path: string,
-  init: RequestInit
-): Promise<{
-  status: number;
-  body: Record<string, any>;
-}> {
+  init: RequestInit,
+): Promise<{ status: number; body: Record<string, any> }> {
   const response = await fetch(`${baseUrl}${path}`, init);
   return { status: response.status, body: (await response.json()) as Record<string, any> };
 }
 
 before(async () => {
-  const app = createServer(await createContainer({ 
-    databaseUrl, 
-    startBackgroundWorkers: false,
-    runMigrations: true 
-  }));
+  const app = createServer(
+    await createContainer({
+      databaseUrl,
+      startBackgroundWorkers: false,
+      runMigrations: true,
+    }),
+  );
   server = await new Promise<Server>((resolve) => {
     const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
   });
@@ -85,31 +83,6 @@ test('logs in, creates a persistent session, and logs out', async () => {
   assert.match(login.body.data.accessToken, /^ey/);
   assert.match(login.body.data.refreshToken, /^ey/);
   assert.match(login.body.data.sessionId, /^[0-9a-f-]{36}$/);
-  assert.deepEqual(login.body.data.user.roles, ['user']);
-
-  const permissionCheck = await request('/api/v1/permissions/check', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${login.body.data.accessToken}`,
-    },
-    body: JSON.stringify({
-      userId: login.body.data.user.id,
-      permission: 'content:read',
-    }),
-  });
-  assert.equal(permissionCheck.status, 200);
-  assert.equal(permissionCheck.body.data.allowed, true);
-
-  const crossUserPermissionCheck = await request('/api/v1/permissions/check', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${login.body.data.accessToken}`,
-    },
-    body: JSON.stringify({ userId: 'another-user', permission: 'content:read' }),
-  });
-  assert.equal(crossUserPermissionCheck.status, 403);
 
   const refreshed = await request('/api/v1/auth/refresh', {
     method: 'POST',
@@ -136,7 +109,10 @@ test('logs in, creates a persistent session, and logs out', async () => {
     body: JSON.stringify({ refreshToken: refreshed.body.data.refreshToken }),
   });
   assert.equal(refreshedAgain.status, 200);
-  assert.notEqual(refreshedAgain.body.data.refreshToken, refreshed.body.data.refreshToken);
+  assert.notEqual(
+    refreshedAgain.body.data.refreshToken,
+    refreshed.body.data.refreshToken,
+  );
 
   const logout = await request('/api/v1/auth/logout', {
     method: 'POST',
@@ -155,70 +131,6 @@ test('logs in, creates a persistent session, and logs out', async () => {
     body: JSON.stringify({ refreshToken: refreshedAgain.body.data.refreshToken }),
   });
   assert.equal(afterLogout.status, 401);
-});
-
-test('keeps RBAC seeds idempotent and roles persistent across container initialization', async () => {
-  const secondContainer = await createContainer({ 
-    databaseUrl, 
-    startBackgroundWorkers: false,
-    runMigrations: false 
-  });
-  const rolesApp = createServer(secondContainer);
-  const rolesServer = await new Promise<Server>((resolve) => {
-    const listener = rolesApp.listen(0, '127.0.0.1', () => resolve(listener));
-  });
-  const rolesAddress = rolesServer.address() as AddressInfo;
-  const rolesBaseUrl = `http://127.0.0.1:${rolesAddress.port}`;
-
-  try {
-    const login = await fetch(`${rolesBaseUrl}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        deviceInfo: {
-          deviceId: 'restart-device',
-          deviceName: 'Restart test',
-          deviceType: 'web',
-          ipAddress: '127.0.0.1',
-          userAgent: 'node:test',
-        },
-      }),
-    });
-    assert.equal(login.status, 200);
-    const loginBody = (await login.json()) as {
-      data: { accessToken: string; user: { roles: string[] } };
-    };
-    assert.deepEqual(loginBody.data.user.roles, ['user']);
-
-    const roleRepository = new DrizzleRoleRepository(secondContainer.database.db);
-    const persistedRoles = await roleRepository.findAll();
-    assert.deepEqual(persistedRoles.map((role) => role.name.value).sort(), [
-      'admin',
-      'guest',
-      'moderator',
-      'user',
-    ]);
-    const userRole = persistedRoles.find((role) => role.name.value === 'user');
-    assert.deepEqual(
-      userRole?.permissions.map((permission) => permission.name),
-      ['content:read']
-    );
-
-    const rolesResponse = await fetch(`${rolesBaseUrl}/api/v1/roles`, {
-      headers: { authorization: `Bearer ${loginBody.data.accessToken}` },
-    });
-    // The roles endpoint is accessible to authenticated users but returns all roles
-    // This test should check that the user can see their own roles, not that it's forbidden
-    assert.equal(rolesResponse.status, 200);
-    const rolesData = await rolesResponse.json();
-    assert.equal(rolesData.success, true);
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      rolesServer.close((error) => (error ? reject(error) : resolve()));
-    });
-  }
 });
 
 test('rejects invalid credentials and malformed requests', async () => {
